@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db"); // Database connection file
+const vesselRoutes = require("./routes/vesselRoutes");
 
 dotenv.config();
 
@@ -18,8 +19,23 @@ connectDB();
 
 // Default route
 app.get("/", (req, res) => {
-  res.json({ message: "API is running 🚀" });
+  res.json({
+    message: "API is running 🚀",
+    vessel: {
+      create: "POST /api/vessels",
+      getAll: "GET /api/vessels",
+      getById: "GET /api/vessels/:id",
+      update: "PUT /api/vessels/:id",
+      delete: "DELETE /api/vessels/:id",
+      getByPort: "GET /api/vessels/port/:portName",
+      getBySupplier: "GET /api/vessels/supplier/:supplierName",
+      getStats: "GET /api/vessels/stats"
+    }
+  });
 });
+
+// 👉 Mount the vessel routes
+app.use('/api/vessels', vesselRoutes);
 
 // 404 handler
 app.use((req, res) => {
