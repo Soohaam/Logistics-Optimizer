@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Ship, Plus, Edit, Trash2, BarChart3, MapPin, Clock, TrendingUp, AlertTriangle, Route, Calendar } from 'lucide-react';
+import { Ship, Plus, Edit, Trash2, BarChart3, MapPin, Clock, TrendingUp, AlertTriangle, Route, Calendar, CheckCircle, XCircle } from 'lucide-react';
+
+interface PlantAllocation {
+  plantName: string;
+  requiredQuantity: number;
+  plantStockAvailability: number;
+}
 
 interface Parcel {
   id: string;
   size: number;
   materialType: string;
   qualityGrade: string;
-  targetPlant: string;
   qualitySpecs: string;
+  plantAllocations: PlantAllocation[];
+}
+
+interface PortPreference {
+  portName: string;
+  sequentialDischarge: boolean;
+  dischargeOrder: string[];
+  portStockAvailability: number;
 }
 
 interface Vessel {
@@ -15,7 +28,15 @@ interface Vessel {
   name: string;
   capacity: number;
   ETA: string;
+  laydays: {
+    start: string;
+    end: string;
+  };
   loadPort: string;
+  supplier: {
+    name: string;
+    country: string;
+  };
   parcels: Parcel[];
   costParameters: {
     fringeOcean: number;
@@ -29,15 +50,22 @@ interface Vessel {
   };
   railData: {
     rakeCapacity: number;
-    railLoadingTimePerDay: number;
-    rakeAvailability: boolean;
+    loadingTimePerDay: number;
+    availability: boolean;
+    numberOfRakesRequired: number;
   };
+  portPreferences: PortPreference[];
 }
 
 const VesselManager: React.FC = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'addVessel' | 'optimization' | 'delayPrediction' | 'portToPlant' | 'timeline'>('dashboard');
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [selectedVessel, setSelectedVessel] = useState<Vessel | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  
+  // API Base URL
+  const API_BASE_URL = 'http://localhost:5000/api/vessels';
   
   // Add Vessel Form States
   const [formStep, setFormStep] = useState(1);
@@ -45,7 +73,15 @@ const VesselManager: React.FC = () => {
     name: '',
     capacity: 0,
     ETA: '',
+    laydays: {
+      start: '',
+      end: ''
+    },
     loadPort: '',
+    supplier: {
+      name: '',
+      country: ''
+    },
     parcels: [],
     costParameters: {
       fringeOcean: 0,
@@ -59,16 +95,106 @@ const VesselManager: React.FC = () => {
     },
     railData: {
       rakeCapacity: 0,
-      railLoadingTimePerDay: 0,
-      rakeAvailability: false
-    }
+      loadingTimePerDay: 0,
+      availability: false,
+      numberOfRakesRequired: 0
+    },
+    portPreferences: []
   });
+
+  // API Functions
+  const fetchVessels = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(API_BASE_URL);
+      const data = await response.json();
+      
+      if (data.success) {
+        setVessels(data.data);
+      } else {
+        setMessage({type: 'error', text: data.error || 'Failed to fetch vessels'});
+      }
+    } catch {
+      setMessage({type: 'error', text: 'Network error: Failed to fetch vessels'});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createVessel = async (vesselData: Vessel) => {
+    try {
+      setLoading(true);
+      const response = await fetch(API_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(vesselData),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setMessage({type: 'success', text: 'Vessel created successfully!'});
+        setVessels([...vessels, data.data]);
+        setCurrentView('dashboard');
+        setFormStep(1);
+        resetForm();
+      } else {
+        setMessage({type: 'error', text: data.error || 'Failed to create vessel'});
+      }
+    } catch {
+      setMessage({type: 'error', text: 'Network error: Failed to create vessel'});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setNewVessel({
+      name: '',
+      capacity: 0,
+      ETA: '',
+      laydays: {
+        start: '',
+        end: ''
+      },
+      loadPort: '',
+      supplier: {
+        name: '',
+        country: ''
+      },
+      parcels: [],
+      costParameters: {
+        fringeOcean: 0,
+        fringeRail: 0,
+        demurrageRate: 0,
+        maxPortCalls: 0,
+        portHandlingFees: 0,
+        storageCost: 0,
+        freeTime: 0,
+        portDifferentialCost: 0
+      },
+      railData: {
+        rakeCapacity: 0,
+        loadingTimePerDay: 0,
+        availability: false,
+        numberOfRakesRequired: 0
+      },
+      portPreferences: []
+    });
+  };
+
+  // Fetch vessels on component mount
+  useEffect(() => {
+    fetchVessels();
+  }, []);
 
   // Dropdown options
   const loadPorts = ['Mumbai Port', 'JNPT Mumbai', 'Kandla Port', 'Paradip Port', 'Visakhapatnam Port'];
   const materialTypes = ['Iron Ore', 'Coal', 'Bauxite', 'Limestone', 'Manganese'];
   const qualityGrades = ['Grade A', 'Grade B', 'Grade C', 'Premium', 'Standard'];
-  const targetPlants = ['Steel Plant A', 'Steel Plant B', 'Power Plant C', 'Cement Plant D', 'Aluminum Plant E'];
+  const countries = ['India', 'Australia', 'Brazil', 'South Africa', 'Indonesia', 'China'];
 
   const addParcel = () => {
     const newParcel: Parcel = {
@@ -76,8 +202,8 @@ const VesselManager: React.FC = () => {
       size: 0,
       materialType: '',
       qualityGrade: '',
-      targetPlant: '',
-      qualitySpecs: ''
+      qualitySpecs: '',
+      plantAllocations: []
     };
     setNewVessel({
       ...newVessel,
@@ -85,7 +211,7 @@ const VesselManager: React.FC = () => {
     });
   };
 
-  const updateParcel = (id: string, field: keyof Parcel, value: any) => {
+  const updateParcel = (id: string, field: keyof Parcel, value: string | number) => {
     setNewVessel({
       ...newVessel,
       parcels: newVessel.parcels.map(parcel => 
@@ -102,31 +228,7 @@ const VesselManager: React.FC = () => {
   };
 
   const submitVessel = () => {
-    setVessels([...vessels, { ...newVessel, _id: Date.now().toString() }]);
-    setCurrentView('dashboard');
-    setFormStep(1);
-    setNewVessel({
-      name: '',
-      capacity: 0,
-      ETA: '',
-      loadPort: '',
-      parcels: [],
-      costParameters: {
-        fringeOcean: 0,
-        fringeRail: 0,
-        demurrageRate: 0,
-        maxPortCalls: 0,
-        portHandlingFees: 0,
-        storageCost: 0,
-        freeTime: 0,
-        portDifferentialCost: 0
-      },
-      railData: {
-        rakeCapacity: 0,
-        railLoadingTimePerDay: 0,
-        rakeAvailability: false
-      }
-    });
+    createVessel(newVessel);
   };
 
   const renderDashboard = () => (
@@ -142,7 +244,12 @@ const VesselManager: React.FC = () => {
         </button>
       </div>
 
-      {vessels.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading vessels...</p>
+        </div>
+      ) : vessels.length === 0 ? (
         <div className="text-center py-12">
           <Ship className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No vessels found</h3>
@@ -194,7 +301,7 @@ const VesselManager: React.FC = () => {
                   <span className="font-medium">Parcels:</span> {vessel.parcels.length}
                 </div>
                 <div>
-                  <span className="font-medium">Rail Available:</span> {vessel.railData.rakeAvailability ? 'Yes' : 'No'}
+                  <span className="font-medium">Rail Available:</span> {vessel.railData.availability ? 'Yes' : 'No'}
                 </div>
               </div>
 
@@ -321,6 +428,59 @@ const VesselManager: React.FC = () => {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Laydays Start</label>
+                <input
+                  type="date"
+                  value={newVessel.laydays.start}
+                  onChange={(e) => setNewVessel({
+                    ...newVessel, 
+                    laydays: {...newVessel.laydays, start: e.target.value}
+                  })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Laydays End</label>
+                <input
+                  type="date"
+                  value={newVessel.laydays.end}
+                  onChange={(e) => setNewVessel({
+                    ...newVessel, 
+                    laydays: {...newVessel.laydays, end: e.target.value}
+                  })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Supplier Name</label>
+                <input
+                  type="text"
+                  value={newVessel.supplier.name}
+                  onChange={(e) => setNewVessel({
+                    ...newVessel, 
+                    supplier: {...newVessel.supplier, name: e.target.value}
+                  })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  placeholder="Enter supplier name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Supplier Country</label>
+                <select
+                  value={newVessel.supplier.country}
+                  onChange={(e) => setNewVessel({
+                    ...newVessel, 
+                    supplier: {...newVessel.supplier, country: e.target.value}
+                  })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                >
+                  <option value="">Select country</option>
+                  {countries.map(country => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -340,7 +500,7 @@ const VesselManager: React.FC = () => {
 
             {newVessel.parcels.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No parcels added yet. Click "Add Parcel" to get started.
+                No parcels added yet. Click &quot;Add Parcel&quot; to get started.
               </div>
             ) : (
               <div className="space-y-4">
@@ -388,19 +548,6 @@ const VesselManager: React.FC = () => {
                           <option value="">Select grade</option>
                           {qualityGrades.map(grade => (
                             <option key={grade} value={grade}>{grade}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Plant</label>
-                        <select
-                          value={parcel.targetPlant}
-                          onChange={(e) => updateParcel(parcel.id, 'targetPlant', e.target.value)}
-                          className="w-full border border-gray-300 rounded px-3 py-2"
-                        >
-                          <option value="">Select plant</option>
-                          {targetPlants.map(plant => (
-                            <option key={plant} value={plant}>{plant}</option>
                           ))}
                         </select>
                       </div>
@@ -556,26 +703,39 @@ const VesselManager: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rail Loading Time Per Day (Hours)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Loading Time Per Day (Hours)</label>
                 <input
                   type="number"
-                  value={newVessel.railData.railLoadingTimePerDay || ''}
+                  value={newVessel.railData.loadingTimePerDay || ''}
                   onChange={(e) => setNewVessel({
                     ...newVessel,
-                    railData: {...newVessel.railData, railLoadingTimePerDay: Number(e.target.value)}
+                    railData: {...newVessel.railData, loadingTimePerDay: Number(e.target.value)}
                   })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   placeholder="Enter loading time per day"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Rakes Required</label>
+                <input
+                  type="number"
+                  value={newVessel.railData.numberOfRakesRequired || ''}
+                  onChange={(e) => setNewVessel({
+                    ...newVessel,
+                    railData: {...newVessel.railData, numberOfRakesRequired: Number(e.target.value)}
+                  })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  placeholder="Enter number of rakes required"
                 />
               </div>
               <div className="col-span-2">
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    checked={newVessel.railData.rakeAvailability}
+                    checked={newVessel.railData.availability}
                     onChange={(e) => setNewVessel({
                       ...newVessel,
-                      railData: {...newVessel.railData, rakeAvailability: e.target.checked}
+                      railData: {...newVessel.railData, availability: e.target.checked}
                     })}
                     className="rounded border-gray-300"
                   />
@@ -606,9 +766,17 @@ const VesselManager: React.FC = () => {
           ) : (
             <button
               onClick={submitVessel}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              disabled={loading}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              Create Vessel
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                'Create Vessel'
+              )}
             </button>
           )}
         </div>
@@ -822,7 +990,7 @@ const VesselManager: React.FC = () => {
             {selectedVessel.parcels.map((parcel, index) => (
               <div key={parcel.id} className="mb-6 p-4 border border-gray-200 rounded-lg">
                 <h4 className="text-lg font-semibold mb-3">
-                  Parcel {index + 1}: {parcel.materialType} → {parcel.targetPlant}
+                  Parcel {index + 1}: {parcel.materialType}
                 </h4>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -1006,7 +1174,7 @@ const VesselManager: React.FC = () => {
                         <p className="text-gray-600">Cargo loaded onto rail rakes for transport</p>
                       </div>
                       <div className="text-right text-sm">
-                        <div className="font-medium">{selectedVessel.railData.railLoadingTimePerDay}h per rake</div>
+                        <div className="font-medium">{selectedVessel.railData.loadingTimePerDay}h per rake</div>
                         <div className="text-gray-500">Loading rate</div>
                       </div>
                     </div>
@@ -1024,9 +1192,9 @@ const VesselManager: React.FC = () => {
                         <h4 className="text-lg font-semibold">Rail Transit to Plants</h4>
                         <p className="text-gray-600">Material transport via rail to target plants</p>
                         <div className="mt-2 space-y-1">
-                          {selectedVessel.parcels.map((parcel, index) => (
+                          {selectedVessel.parcels.map((parcel) => (
                             <div key={parcel.id} className="text-sm text-gray-600">
-                              • {parcel.materialType} → {parcel.targetPlant}
+                              • {parcel.materialType}
                             </div>
                           ))}
                         </div>
@@ -1134,6 +1302,28 @@ const VesselManager: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Message Display */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg flex items-center ${
+            message.type === 'success' 
+              ? 'bg-green-50 border border-green-200 text-green-800' 
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {message.type === 'success' ? (
+              <CheckCircle className="h-5 w-5 mr-2" />
+            ) : (
+              <XCircle className="h-5 w-5 mr-2" />
+            )}
+            <span>{message.text}</span>
+            <button
+              onClick={() => setMessage(null)}
+              className="ml-auto text-gray-400 hover:text-gray-600"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
