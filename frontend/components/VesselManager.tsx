@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Ship, Plus, Edit, Trash2, CheckCircle, XCircle, Package, Settings, Train, Anchor } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,10 +69,15 @@ interface Vessel {
 }
 
 const VesselManager: React.FC = () => {
+  const router = useRouter();
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  const handleVesselClick = (vesselId: string) => {
+    router.push(`/vessels/${vesselId}`);
+  };
   
   // API Base URL
   const API_BASE_URL = 'http://localhost:5000/api/vessels';
@@ -468,10 +474,16 @@ const VesselManager: React.FC = () => {
       ) : (
         <div className="grid gap-8">
           {vessels.map((vessel) => (
-            <Card key={vessel._id} className="shadow-lg hover:shadow-xl transition-all duration-300 border-0">
+            <Card 
+              key={vessel._id} 
+              className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 relative"
+            >
               <CardHeader className="pb-6">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div 
+                    className="cursor-pointer flex-grow"
+                    onClick={() => vessel._id && handleVesselClick(vessel._id)}
+                  >
                     <CardTitle className="text-2xl flex items-center gap-3" style={{ color: '#06156B' }}>
                       <Ship className="h-6 w-6" style={{ color: '#06156B' }} />
                       {vessel.name}
