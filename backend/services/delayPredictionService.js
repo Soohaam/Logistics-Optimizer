@@ -6,7 +6,7 @@ const DelayPrediction = require('../models/DelayPrediction')
 class DelayPredictionService {
   constructor() {
     this.genAI = new GoogleGenerativeAI("AIzaSyC_VGYzY3hsfC5l-WrjKBh1Ei58Pt7N8Dw");
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   }
 
   /**
