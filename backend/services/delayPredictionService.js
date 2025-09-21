@@ -1,3 +1,4 @@
+require("dotenv").config();
 // services/delayPredictionService.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
@@ -5,7 +6,7 @@ const DelayPrediction = require('../models/DelayPrediction')
 
 class DelayPredictionService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI("AIzaSyC_VGYzY3hsfC5l-WrjKBh1Ei58Pt7N8Dw");
+    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
     this.model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   }
 
