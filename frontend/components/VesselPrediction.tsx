@@ -4,7 +4,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import DelayPrediction from './DelayPrediction';
-import { PortToPlant, Optimization } from './PlaceholderComponents';
+import PortToPlant from './PortToPlant';
+import { Optimization } from './PlaceholderComponents';
 import { TabType } from '../types/delay-prediction';
 
 interface VesselDetails {
@@ -24,6 +25,7 @@ const VesselPrediction: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [vesselDetails, setVesselDetails] = useState<VesselDetails | null>(null);
   const [delayPredictionLoaded, setDelayPredictionLoaded] = useState(false);
+  const [portToPlantLoaded, setPortToPlantLoaded] = useState(false);
 
   // Tab order for navigation
   const tabOrder: TabType[] = ['vessel-details', 'delay-prediction', 'port-to-plant', 'optimization'];
@@ -67,6 +69,7 @@ const VesselPrediction: React.FC = () => {
 
   const isNextDisabled = () => {
     if (activeTab === 'delay-prediction' && !delayPredictionLoaded) return true;
+    if (activeTab === 'port-to-plant' && !portToPlantLoaded) return true;
     return tabOrder.indexOf(activeTab) === tabOrder.length - 1;
   };
 
@@ -115,7 +118,7 @@ const VesselPrediction: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="optimization"
-            disabled={!delayPredictionLoaded}
+            disabled={!delayPredictionLoaded || !portToPlantLoaded}
           >
             Optimization
           </TabsTrigger>
@@ -156,7 +159,10 @@ const VesselPrediction: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="port-to-plant">
-          <PortToPlant />
+          <PortToPlant 
+            vesselId={vesselId as string}
+            onLoadComplete={() => setPortToPlantLoaded(true)}
+          />
         </TabsContent>
 
         <TabsContent value="optimization">
