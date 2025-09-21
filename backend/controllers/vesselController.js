@@ -1,5 +1,6 @@
 // controllers/vesselController.js
 const vesselService = require('../services/vesselService');
+const delayPredictionService = require('../services/delayPredictionService');
 
 class VesselController {
   
@@ -133,6 +134,24 @@ class VesselController {
       });
     } catch (error) {
       res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  async predictDelay(req, res) {
+    try {
+      const vessel = await vesselService.getVesselById(req.params.id);
+      const prediction = await delayPredictionService.predictDelay(vessel);
+      
+      res.status(200).json({
+        success: true,
+        data: prediction
+      });
+    } catch (error) {
+      const statusCode = error.message.includes('not found') ? 404 : 500;
+      res.status(statusCode).json({
         success: false,
         error: error.message
       });

@@ -21,6 +21,9 @@ router.get('/supplier/:supplierName', vesselController.getVesselsBySupplier);
 // Get vessel by ID
 router.get('/:id', vesselController.getVesselById);
 
+// Predict delay for vessel by ID
+router.post('/:id/predict-delay', vesselController.predictDelay);
+
 // Update vessel by ID
 router.put('/:id', vesselController.updateVessel);
 

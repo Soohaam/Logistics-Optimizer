@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db"); // Database connection file
 const vesselRoutes = require("./routes/vesselRoutes");
+const delayRoutes = require("./routes/delay");
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.get("/", (req, res) => {
       create: "POST /api/vessels",
       getAll: "GET /api/vessels",
       getById: "GET /api/vessels/:id",
+      predictDelay: "POST /api/vessels/:id/predict-delay",
       update: "PUT /api/vessels/:id",
       delete: "DELETE /api/vessels/:id",
       getByPort: "GET /api/vessels/port/:portName",
@@ -36,7 +38,7 @@ app.get("/", (req, res) => {
 
 // 👉 Mount the vessel routes
 app.use('/api/vessels', vesselRoutes);
-
+app.use('/api/delay', delayRoutes);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, error: "Route not found" });
