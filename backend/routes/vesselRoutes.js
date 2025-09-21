@@ -1,7 +1,24 @@
 // routes/vesselRoutes.js
 const express = require('express');
+const multer = require('multer');
 const vesselController = require('../controllers/vesselController');
 const router = express.Router();
+
+// Configure multer for file upload
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV and Excel files are allowed.'));
+    }
+  }
+});
 
 // Create a new vessel
 router.post('/', vesselController.createVessel);
@@ -29,5 +46,11 @@ router.put('/:id', vesselController.updateVessel);
 
 // Delete vessel by ID
 router.delete('/:id', vesselController.deleteVessel);
+
+// Handle CSV upload
+router.post('/upload-csv', upload.single('file'), vesselController.uploadVesselCSV);
+
+// Download CSV template
+router.get('/download-template', vesselController.downloadTemplate);
 
 module.exports = router;

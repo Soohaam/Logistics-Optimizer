@@ -1,6 +1,7 @@
 // controllers/vesselController.js
 const vesselService = require('../services/vesselService');
 const delayPredictionService = require('../services/delayPredictionService');
+const csvUploadService = require('../services/csvUploadService');
 
 class VesselController {
   
@@ -93,6 +94,48 @@ class VesselController {
     }
   }
 
+  async uploadCsv(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No file uploaded'
+        });
+      }
+
+      const result = await csvUploadService.processVesselFile(req.file);
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('CSV Upload Error:', error);
+      res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  async downloadTemplate(req, res) {
+    try {
+      const templateContent = [
+        'name,capacity,ETA,laydaysStart,laydaysEnd,loadPort,supplierName,supplierCountry',
+        'Example Vessel,50000,2025-09-30,2025-09-25,2025-10-05,Port A,Supplier Inc,Country A'
+      ].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=vessel_template.csv');
+      res.status(200).send(templateContent);
+    } catch (error) {
+      console.error('Template Download Error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate template'
+      });
+    }
+  }
+
   async getVesselsByPort(req, res) {
     try {
       const vessels = await vesselService.getVesselsByPort(req.params.portName);
@@ -152,6 +195,55 @@ class VesselController {
     } catch (error) {
       const statusCode = error.message.includes('not found') ? 404 : 500;
       res.status(statusCode).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Upload vessels from CSV/Excel file
+   */
+  async uploadVesselCSV(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No file uploaded'
+        });
+      }
+
+      const results = await csvUploadService.processVesselFile(req.file);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          successCount: results.successful.length,
+          failureCount: results.failed.length,
+          total: results.total,
+          successful: results.successful,
+          failed: results.failed
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Download CSV template
+   */
+  async downloadTemplate(req, res) {
+    try {
+      const template = csvUploadService.generateTemplate();
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=vessel_template.csv');
+      res.send(template);
+    } catch (error) {
+      res.status(500).json({
         success: false,
         error: error.message
       });

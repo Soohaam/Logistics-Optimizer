@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ship, Plus, Edit, Trash2, CheckCircle, XCircle, Package, Settings, Train, Anchor } from 'lucide-react';
+import { Ship, Plus, Edit, Trash2, CheckCircle, XCircle, Package, Settings, Train, Anchor, Upload, FileSpreadsheet, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface PlantAllocation {
   plantName: string;
@@ -32,6 +33,14 @@ interface PortPreference {
   sequentialDischarge: boolean;
   dischargeOrder: string[];
   portStockAvailability: number;
+}
+
+interface UploadResult {
+  successCount: number;
+  failureCount: number;
+  total: number;
+  successful: Array<{ name: string; id: string }>;
+  failed: Array<{ row: any; error: string }>;
 }
 
 interface Vessel {
@@ -74,9 +83,310 @@ const VesselManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // CSV Upload Modal Component
+  const CSVUploadModal = () => (
+    <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Import Vessels</DialogTitle>
+          <DialogDescription className="text-lg">
+            Upload a CSV or Excel file containing vessel information
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          <div className="flex flex-col space-y-4">
+            <Label className="text-lg">Select File</Label>
+            <div className="flex gap-4">
+              <Input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileSelect}
+                className="h-12 text-lg"
+              />
+              <Button
+                variant="outline"
+                onClick={downloadTemplate}
+                className="whitespace-nowrap px-4 py-2 text-lg h-12"
+              >
+                <FileSpreadsheet className="h-5 w-5 mr-2" />
+                Template
+              </Button>
+            </div>
+            {message && (
+              <div className={`flex items-center gap-2 text-${message.type === 'success' ? 'green' : 'red'}-600`}>
+                {message.type === 'success' ? (
+                  <CheckCircle className="h-5 w-5" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5" />
+                )}
+                <p className="text-lg">{message.text}</p>
+              </div>
+            )}
+          </div>
+
+          {uploadLoading && (
+            <div className="text-center py-4">
+              <div 
+                className="animate-spin rounded-full h-12 w-12 border-b-4 mx-auto mb-4"
+                style={{ borderBottomColor: '#06156B' }}
+              ></div>
+              <p className="text-slate-600 text-lg">Uploading vessels...</p>
+            </div>
+          )}
+
+          {uploadResult && !uploadLoading && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-lg">Successfully imported: {uploadResult.successCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  <span className="text-lg">Failed: {uploadResult.failureCount}</span>
+                </div>
+              </div>
+
+              {uploadResult.failed.length > 0 && (
+                <div className="mt-4">
+                  <Label className="text-lg text-red-600">Errors:</Label>
+                  <div className="mt-2 max-h-40 overflow-y-auto space-y-2">
+                    {uploadResult.failed.map((failure, index) => (
+                      <div key={index} className="flex items-start gap-2 text-red-600">
+                        <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                        <p className="text-lg">{failure.error}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowUploadModal(false);
+              setSelectedFile(null);
+              setMessage(null);
+              setUploadResult(null);
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || uploadLoading}
+            style={{ backgroundColor: '#06156B' }}
+            className="hover:bg-blue-900"
+          >
+            {uploadLoading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   const handleVesselClick = (vesselId: string) => {
     router.push(`/vessels/${vesselId}`);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File select triggered');
+    const file = event.target.files?.[0];
+    if (!file) {
+      setMessage({ type: 'error', text: 'No file selected' });
+      setSelectedFile(null);
+      return;
+    }
+    console.log('Selected file:', file.name, 'type:', file.type, 'size:', file.size);
+
+    // Reset previous states
+    setMessage(null);
+    setUploadResult(null);
+
+    // Validate file size
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      setMessage({ type: 'error', text: 'File size should be less than 10MB' });
+      setSelectedFile(null);
+      event.target.value = ''; // Reset file input
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    const allowedExtensions = ['.csv', '.xls', '.xlsx'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Invalid file type. Please upload a CSV or Excel file (.csv, .xls, .xlsx)' 
+      });
+      setSelectedFile(null);
+      event.target.value = ''; // Reset file input
+      return;
+    }
+
+    setSelectedFile(file);
+    setMessage({ type: 'success', text: 'File selected: ' + file.name });
+  };
+
+  const handleUpload = async () => {
+    console.log('Upload triggered');
+    if (!selectedFile) {
+      console.log('No file selected for upload');
+      setMessage({ type: 'error', text: 'Please select a file to upload' });
+      return;
+    }
+
+    console.log('Starting upload for file:', selectedFile.name);
+    setUploadLoading(true);
+    setMessage(null);
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      // First attempt to check if the server is reachable
+      const serverCheck = await fetch(API_BASE_URL, { method: 'HEAD' })
+        .catch(() => ({ ok: false }));
+
+      if (!serverCheck.ok) {
+        throw new Error('Server is not reachable. Please try again later.');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/upload-csv`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // Don't set Content-Type header as it will be automatically set by the browser for FormData
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      if (data.data.successCount === 0 && data.data.failureCount === 0) {
+        throw new Error('No vessels found in the uploaded file');
+      }
+
+      setUploadResult(data.data);
+      await fetchVessels(); // Refresh vessel list
+      
+      // Set appropriate message based on results
+      if (data.data.failureCount === 0) {
+        setMessage({
+          type: 'success',
+          text: `Successfully imported ${data.data.successCount} vessels`
+        });
+      } else if (data.data.successCount === 0) {
+        setMessage({
+          type: 'error',
+          text: `Failed to import any vessels. Please check the errors below.`
+        });
+      } else {
+        setMessage({
+          type: 'success',
+          text: `Imported ${data.data.successCount} vessels with ${data.data.failureCount} failures`
+        });
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to upload file'
+      });
+      setUploadResult(null);
+    } finally {
+      setUploadLoading(false);
+      setSelectedFile(null);
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) fileInput.value = ''; // Reset file input
+    }
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      setMessage(null);
+
+      // Check if the server is reachable
+      const serverCheck = await fetch(API_BASE_URL, { method: 'HEAD' })
+        .catch(() => ({ ok: false }));
+
+      if (!serverCheck.ok) {
+        throw new Error('Server is not reachable. Please try again later.');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/download-template`, {
+        headers: {
+          'Accept': 'text/csv',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download template: ${response.statusText}`);
+      }
+
+      // Check content type
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('text/csv')) {
+        throw new Error('Invalid template format received from server');
+      }
+
+      const blob = await response.blob();
+      
+      // Verify blob is not empty
+      if (blob.size === 0) {
+        throw new Error('Template file is empty');
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const timestamp = new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `vessel_template_${timestamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setMessage({
+        type: 'success',
+        text: 'Template downloaded successfully'
+      });
+    } catch (error) {
+      console.error('Template download error:', error);
+      setMessage({
+        type: 'error',
+        text: error instanceof Error 
+          ? error.message 
+          : 'Failed to download template. Please try again.'
+      });
+    }
   };
   
   // API Base URL
@@ -435,15 +745,26 @@ const VesselManager: React.FC = () => {
           <h2 className="text-4xl font-bold" style={{ color: '#06156B' }}>Fleet Management</h2>
           <p className="text-slate-600 mt-2 text-lg">Manage your vessel fleet and cargo operations</p>
         </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          style={{ backgroundColor: '#06156B' }}
-          className="hover:bg-blue-900 shadow-lg text-white px-8 py-4 text-lg"
-          size="lg"
-        >
-          <Plus className="h-6 w-6 mr-3" />
-          Add New Vessel
-        </Button>
+        <div className="flex gap-4">
+          <Button
+            onClick={() => setShowUploadModal(true)}
+            variant="outline"
+            className="shadow-lg px-8 py-4 text-lg"
+            size="lg"
+          >
+            <FileSpreadsheet className="h-6 w-6 mr-3" />
+            Import CSV
+          </Button>
+          <Button
+            onClick={() => setShowForm(true)}
+            style={{ backgroundColor: '#06156B' }}
+            className="hover:bg-blue-900 shadow-lg text-white px-8 py-4 text-lg"
+            size="lg"
+          >
+            <Plus className="h-6 w-6 mr-3" />
+            Add New Vessel
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -1330,6 +1651,7 @@ const VesselManager: React.FC = () => {
           </div>
         </div>
       </div>
+      <CSVUploadModal />
     </div>
   );
 };
