@@ -20,7 +20,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Popover, PopoverTrigger, PopoverContent } from "ui/popover";
 import { Badge } from "ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "ui/avatar";
-import Dashboard from "../components/Dashboard";
+import VesselManager from "../components/VesselManager";
 
 export default function Home() {
   const [radioValue, setRadioValue] = useState("option1");
@@ -37,9 +37,9 @@ export default function Home() {
         <Button variant="ghost">Ghost Button</Button>
       </section>
 
-      <section className="flex gap-4 flex-wrap">
-        <Dashboard />
-      </section>
+      
+        <VesselManager />
+      
 
       {/* Inputs & Form */}
       <section className="flex flex-col gap-4 max-w-md">
