@@ -1,7 +1,6 @@
 require("dotenv").config();
 // services/delayPredictionService.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const axios = require('axios');
 const DelayPrediction = require('../models/DelayPrediction')
 
 class DelayPredictionService {
@@ -48,7 +47,7 @@ class DelayPredictionService {
   async gatherRealTimeData(vesselData) {
     try {
       const [weatherData, portCongestionData, vesselTrackingData] = await Promise.all([
-        this.getWeatherData(vesselData.loadPort),
+        this.getWeatherDataViaGemini(vesselData.loadPort),
         this.getPortCongestionDataViaGemini(vesselData.loadPort),
         this.getVesselTrackingDataViaGemini(vesselData.name, vesselData.loadPort)
       ]);
@@ -60,49 +59,54 @@ class DelayPredictionService {
       };
     } catch (error) {
       console.error('Error gathering real-time data:', error);
-      // Return default values if real-time data fails
       return this.getDefaultRealTimeData();
     }
   }
 
   /**
-   * Get real weather data for Indian ports
+   * Get weather data using Gemini AI
    */
-  async getWeatherData(portName) {
+  async getWeatherDataViaGemini(portName) {
+    const prompt = `
+You are a maritime weather expert with access to current Indian port weather data.
+
+Provide realistic real-time weather data for port "${portName}" in India based on:
+- Current date: ${new Date().toLocaleDateString()}
+- Day of week: ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+- Time of year and seasonal patterns
+- Typical weather for this port location
+- Current global weather trends
+- Introduce dynamic variations to simulate real-life fluctuations (e.g., slight random changes in wind, waves based on probabilistic models)
+
+Return ONLY valid JSON with realistic estimates:
+{
+  "windSpeed": <wind speed in km/h, 0-100, vary realistically>,
+  "waveHeight": <wave height in meters, 0-10, vary realistically>,
+  "visibility": "<Good/Moderate/Poor>",
+  "seaCondition": "<Calm/Slight/Moderate/Rough>",
+  "rainIntensity": <0-10, 0 none, 10 heavy>,
+  "source": "Gemini Weather Intelligence",
+  "lastUpdated": "${new Date().toISOString()}"
+}
+
+Ensure data is dynamic and not repetitive. Simulate real variations based on time, season, and random weather events.
+`;
+
     try {
-      // Using Indian Meteorological Department API for accurate weather data
-      const portCoordinates = this.getPortCoordinates(portName);
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
       
-      // IMD API for port warnings
-      const imdResponse = await axios.get('https://mausam.imd.gov.in/api/port_wx_api.php', {
-        timeout: 10000
-      });
-
-      // Open-Meteo API for marine weather (free and reliable)
-      const marineWeatherResponse = await axios.get('https://marine-api.open-meteo.com/v1/marine', {
-        params: {
-          latitude: portCoordinates.lat,
-          longitude: portCoordinates.lng,
-          hourly: 'wave_height,wind_speed_10m,visibility',
-          current: 'wave_height,wind_speed_10m'
-        },
-        timeout: 10000
-      });
-
-      const current = marineWeatherResponse.data.current;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const weatherData = JSON.parse(jsonMatch[0]);
+        return this.validateWeatherData(weatherData);
+      }
       
-      return {
-        windSpeed: current.wind_speed_10m || 10,
-        waveHeight: current.wave_height || 1.5,
-        visibility: this.classifyVisibility(current.visibility),
-        seaCondition: this.classifySeaCondition(current.wave_height),
-        rainIntensity: 0,
-        source: 'IMD/Open-Meteo',
-        lastUpdated: new Date().toISOString()
-      };
+      throw new Error('Invalid JSON response from Gemini');
       
     } catch (error) {
-      console.error('Weather API error:', error);
+      console.error('Gemini weather error:', error);
       return this.getDefaultWeatherData();
     }
   }
@@ -120,13 +124,14 @@ Provide realistic real-time congestion data for port "${portName}" in India base
 - Time of year and seasonal patterns
 - Typical operations for this port size and capacity
 - Current global shipping trends
+- Introduce dynamic variations to simulate real-life fluctuations (e.g., varying queue based on time of day, recent shipments)
 
 Return ONLY valid JSON with realistic estimates:
 {
-  "queuedVessels": <number of vessels currently waiting>,
-  "averageWaitTime": <current average wait time in hours>,
+  "queuedVessels": <number of vessels currently waiting, vary 0-50>,
+  "averageWaitTime": <current average wait time in hours, vary 0-168>,
   "congestionLevel": "<low/medium/high>",
-  "berthAvailability": <number of available berths>,
+  "berthAvailability": <number of available berths, vary 0-20>,
   "currentUtilization": <port utilization percentage 0-100>,
   "operationalStatus": "<normal/reduced/enhanced>",
   "source": "Gemini Intelligence",
@@ -139,8 +144,9 @@ Consider factors like:
 - Regional shipping traffic
 - Weather impact on operations
 - Weekend/holiday effects
+- Simulate random but realistic events like sudden arrivals or maintenance
 
-Provide realistic data that reflects actual port conditions for ${portName}.
+Ensure data is dynamic, reliable, and reflects real port conditions with variations to avoid repetition.
 `;
 
     try {
@@ -174,28 +180,30 @@ For vessel "${vesselName}" heading to port "${portName}" in India, provide reali
 - Distance calculations to Indian ports
 - Current maritime traffic patterns
 - Seasonal voyage considerations
+- Introduce dynamic variations to simulate real-life tracking (e.g., speed fluctuations, position adjustments)
 
 Return ONLY valid JSON with realistic estimates:
 {
-  "currentLatitude": <realistic latitude near Indian coast>,
-  "currentLongitude": <realistic longitude near Indian coast>,
-  "speed": <current speed in knots, typically 10-15>,
-  "distanceToPort": <distance to port in nautical miles>,
-  "estimatedArrival": "<ISO datetime estimate>",
+  "currentLatitude": <realistic latitude near Indian coast, vary within bounds>,
+  "currentLongitude": <realistic longitude near Indian coast, vary within bounds>,
+  "speed": <current speed in knots, typically 10-15, vary realistically>,
+  "distanceToPort": <distance to port in nautical miles, vary 0-5000>,
+  "estimatedArrival": "<ISO datetime estimate, vary based on speed and distance>",
   "voyageStatus": "<approaching/en_route/near_port>",
-  "delayFromSchedule": <hours ahead/behind schedule>,
+  "delayFromSchedule": <hours ahead/behind schedule, -48 to 72>,
   "source": "Gemini Tracking Intelligence",
   "lastUpdated": "${new Date().toISOString()}"
 }
 
 Consider:
-- Normal vessel speeds (10-15 knots for cargo vessels)
+- Normal vessel speeds (10-15 knots for cargo vessels) with variations
 - Realistic distances to ${portName}
 - Current date/time: ${new Date().toISOString()}
 - Typical voyage patterns for Indian ports
 - Weather and sea condition impacts
+- Simulate random but realistic deviations like course corrections
 
-Provide realistic tracking data for maritime logistics planning.
+Ensure data is dynamic and not repetitive, reflecting real maritime conditions.
 `;
 
     try {
@@ -248,11 +256,11 @@ VESSEL TRACKING:
 - Distance to Port: ${realTimeData.vesselTracking.distanceToPort} nautical miles
 - Voyage Status: ${realTimeData.vesselTracking.voyageStatus}
 
-Based on this REAL data, provide accurate delay predictions. Return ONLY valid JSON:
+Based on this REAL data, provide accurate delay predictions with dynamic considerations. Return ONLY valid JSON:
 
 {
   "arrivalDelay": {
-    "hours": <number>,
+    "hours": <number, vary based on data>,
     "confidence": <0-1>
   },
   "berthingDelay": {
@@ -270,7 +278,7 @@ Based on this REAL data, provide accurate delay predictions. Return ONLY valid J
   "riskLevel": "<low/medium/high/critical>"
 }
 
-Use ONLY the provided real data. Do not fabricate information. Base predictions on actual weather, congestion, and vessel conditions provided.
+Use ONLY the provided real data. Introduce logical variations in predictions to reflect real uncertainties. Do not fabricate information.
 `;
 
     try {
@@ -321,6 +329,18 @@ Use ONLY the provided real data. Do not fabricate information. Base predictions 
   /**
    * Validation methods
    */
+  validateWeatherData(data) {
+    return {
+      windSpeed: Math.max(0, Math.min(100, data.windSpeed || 10)),
+      waveHeight: Math.max(0, Math.min(10, data.waveHeight || 1.5)),
+      visibility: ['Good', 'Moderate', 'Poor'].includes(data.visibility) ? data.visibility : 'Moderate',
+      seaCondition: ['Calm', 'Slight', 'Moderate', 'Rough'].includes(data.seaCondition) ? data.seaCondition : 'Slight',
+      rainIntensity: Math.max(0, Math.min(10, data.rainIntensity || 0)),
+      source: data.source || 'Gemini Weather Intelligence',
+      lastUpdated: data.lastUpdated || new Date().toISOString()
+    };
+  }
+
   validatePortCongestionData(data) {
     return {
       queuedVessels: Math.max(0, Math.min(50, data.queuedVessels || 3)),
@@ -351,48 +371,6 @@ Use ONLY the provided real data. Do not fabricate information. Base predictions 
     };
   }
 
-  /**
-   * Helper methods for coordinate mapping and defaults
-   */
-  getPortCoordinates(portName) {
-    const portCoords = {
-      'Haldia': { lat: 22.0258, lng: 88.0636 },
-      'Paradip': { lat: 20.2597, lng: 86.6947 },
-      'Vizag': { lat: 17.6868, lng: 83.2185 },
-      'Chennai': { lat: 13.0878, lng: 80.2785 },
-      'Mumbai': { lat: 19.0760, lng: 72.8777 },
-      'Kandla': { lat: 23.0225, lng: 70.2208 },
-      'Cochin': { lat: 9.9312, lng: 76.2673 },
-      'Tuticorin': { lat: 8.7642, lng: 78.1348 }
-    };
-    return portCoords[portName] || { lat: 20.0, lng: 85.0 };
-  }
-
-  classifyVisibility(visibility) {
-    if (visibility > 5000) return 'Good';
-    if (visibility > 2000) return 'Moderate';
-    return 'Poor';
-  }
-
-  classifySeaCondition(waveHeight) {
-    if (waveHeight < 1) return 'Calm';
-    if (waveHeight < 2) return 'Slight';
-    if (waveHeight < 3) return 'Moderate';
-    return 'Rough';
-  }
-
-  calculateDistance(lat1, lon1, lat2, lon2) {
-    // Haversine formula for distance calculation
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  }
-
   validatePrediction(prediction) {
     return {
       arrivalDelay: {
@@ -410,7 +388,7 @@ Use ONLY the provided real data. Do not fabricate information. Base predictions 
     };
   }
 
-  // Default data methods for fallback
+  // Default data methods for ultimate fallback
   getDefaultWeatherData() {
     return {
       windSpeed: 15,
