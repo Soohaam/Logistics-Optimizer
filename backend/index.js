@@ -4,7 +4,8 @@ const cors = require("cors");
 const connectDB = require("./config/db"); // Database connection file
 const vesselRoutes = require("./routes/vesselRoutes");
 const delayRoutes = require("./routes/delay");
-const portToPlantRoutes = require("./routes/portToPlantRoutes"); // New route
+const portToPlantRoutes = require("./routes/portToPlantRoutes");
+const optimizationRoutes = require("./routes/optimizationRoutes"); // New optimization route
 
 dotenv.config();
 
@@ -44,6 +45,10 @@ app.get("/", (req, res) => {
         getAnalysis: "GET /api/port-to-plant/vessel/:vesselId",
         regenerateAnalysis: "POST /api/port-to-plant/vessel/:vesselId/regenerate",
         getAllAnalyses: "GET /api/port-to-plant/"
+      },
+      optimization: {
+        getAnalysis: "GET /api/optimization/vessel/:vesselId",
+        regenerateAnalysis: "POST /api/optimization/vessel/:vesselId/regenerate"
       }
     }
   });
@@ -52,7 +57,8 @@ app.get("/", (req, res) => {
 // 👉 Mount the routes
 app.use('/api/vessels', vesselRoutes);
 app.use('/api/delay', delayRoutes);
-app.use('/api/port-to-plant', portToPlantRoutes); // New route mounting
+app.use('/api/port-to-plant', portToPlantRoutes);
+app.use('/api/optimization', optimizationRoutes); // New optimization route mounting
 
 // 404 handler
 app.use((req, res) => {

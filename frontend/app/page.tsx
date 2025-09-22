@@ -66,10 +66,9 @@ export default function LandingPage() {
                 Home
               </Button>
               <Link href="/vessel-manager">
-                <Button className="relative overflow-hidden group bg-gradient-to-r from-blue-500 to-purple-600 text-white text-lg px-6 py-2 rounded-lg">
-                  <span className="relative z-10">Dashboard</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-500 transition-transform duration-300 transform translate-x-full group-hover:translate-x-0" />
-                </Button>
+              <Button className="bg-blue-500 text-white text-lg px-6 py-2 rounded-lg">
+  Dashboard
+</Button>
               </Link>
             </motion.div>
 
@@ -114,10 +113,10 @@ export default function LandingPage() {
                     Home
                   </Button>
                   <Link href="/vessel-manager">
-                    <Button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-lg px-6 py-2 rounded-lg w-full">
-                      Dashboard
-                    </Button>
-                  </Link>
+  <Button className="bg-blue-500 text-white text-lg px-6 py-2 rounded-lg w-full">
+    Dashboard
+  </Button>
+</Link>
                 </motion.div>
               </motion.div>
             )}
@@ -141,9 +140,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
           >
-            <h1 className="text-5xl md:text-8xl font-extrabold bg-gradient-to-r from-neon-pink via-neon-blue to-neon-purple bg-clip-text text-transparent leading-tight tracking-tighter">
-              AI-Powered Logistics
-            </h1>
+            
           </motion.div>
 
           <motion.div
@@ -151,9 +148,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
           >
-            <p className="text-xl md:text-3xl text-gray-200 mt-4 mb-8 max-w-3xl mx-auto leading-relaxed font-light">
-              Next-Gen Vessel Scheduling & Cost Optimization for Steel Supply Chains
-            </p>
+           
           </motion.div>
 
           <motion.div
@@ -161,17 +156,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, delay: 0.4, ease: "easeOut" }}
           >
-            <Link href="/vessel-manager">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-neon-pink to-neon-blue hover:from-neon-blue hover:to-neon-purple text-white text-xl px-10 py-6 rounded-full border-0 shadow-2xl hover:shadow-neon-blue/70 transition-all duration-300 transform hover:scale-105"
-              >
-                Launch Dashboard
-                <svg className="ml-3 w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Button>
-            </Link>
+        
           </motion.div>
         </div>
 
