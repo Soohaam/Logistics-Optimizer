@@ -717,7 +717,7 @@ const VesselPrediction: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Optimization />
+              <Optimization vesselId={vesselId} />
             </CardContent>
           </Card>
         </TabsContent>

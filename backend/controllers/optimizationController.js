@@ -1,71 +1,70 @@
-const optimizationService = require('../services/optimizationService');
+﻿const optimizationService = require('../services/optimizationService');
+const vesselService = require('../services/vesselService');
+const Optimization = require('../models/Optimization');
 
-const optimizationController = {
-  // Get optimization analysis for a specific vessel
-  async getOptimizationAnalysis(req, res) {
-    try {
-      const { vesselId } = req.params;
-      
-      if (!vesselId) {
-        return res.status(400).json({
-          success: false,
-          error: 'Vessel ID is required'
-        });
-      }
-
-      const optimizationData = await optimizationService.getOptimizationAnalysis(vesselId);
-      
-      if (!optimizationData) {
-        return res.status(404).json({
-          success: false,
-          error: 'No data found for the specified vessel'
-        });
-      }
-
-      res.status(200).json({
-        success: true,
-        data: optimizationData
-      });
-
-    } catch (error) {
-      console.error('Error in getOptimizationAnalysis:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch optimization analysis',
-        details: error.message
-      });
+const getOptimizationAnalysis = async (req, res) => {
+  try {
+    const { vesselId } = req.params;
+    
+    let optimization = await Optimization.findOne({ vesselId });
+    
+    if (optimization && optimization.status === 'completed') {
+      return res.json({ success: true, data: optimization });
     }
-  },
-
-  // Regenerate optimization analysis using Gemini API
-  async regenerateOptimizationAnalysis(req, res) {
-    try {
-      const { vesselId } = req.params;
-      
-      if (!vesselId) {
-        return res.status(400).json({
-          success: false,
-          error: 'Vessel ID is required'
-        });
-      }
-
-      const optimizationData = await optimizationService.regenerateOptimizationWithAI(vesselId);
-      
-      res.status(200).json({
-        success: true,
-        data: optimizationData,
-        message: 'Optimization analysis regenerated successfully'
-      });
-
-    } catch (error) {
-      console.error('Error in regenerateOptimizationAnalysis:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to regenerate optimization analysis',
-        details: error.message
-      });
+    
+    const vessel = await vesselService.getVesselById(vesselId);
+    if (!vessel) {
+      return res.status(404).json({ success: false, error: 'Vessel not found' });
     }
+    
+    const optimizationId = `OPT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    if (!optimization) {
+      optimization = new Optimization({
+        vesselId: vessel._id,
+        optimizationId,
+        vesselName: vessel.name,
+        status: 'computing'
+      });
+      await optimization.save();
+    }
+    
+    performOptimizationAsync(vessel, optimization._id);
+    
+    res.json({ success: true, data: optimization, message: 'Computing...' });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
-module.exports = optimizationController;
+const performOptimizationAsync = async (vesselData, optimizationId) => {
+  try {
+    const result = await optimizationService.optimizeVesselOperations(vesselData);
+    
+    await Optimization.findByIdAndUpdate(optimizationId, {
+      optimizationResults: result.optimizationResults,
+      mapVisualizationData: result.mapVisualizationData,
+      status: 'completed'
+    });
+    
+  } catch (error) {
+    console.error('Optimization failed:', error);
+    await Optimization.findByIdAndUpdate(optimizationId, { status: 'failed' });
+  }
+};
+
+const regenerateOptimizationAnalysis = async (req, res) => {
+  try {
+    const { vesselId } = req.params;
+    await Optimization.findOneAndDelete({ vesselId });
+    return getOptimizationAnalysis(req, res);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+module.exports = {
+  getOptimizationAnalysis,
+  regenerateOptimizationAnalysis
+};
