@@ -364,7 +364,7 @@ const PortToPlant: React.FC<PortToPlantProps> = ({ vesselId, onLoadComplete }) =
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="text-3xl font-bold text-foreground">
-              ₹{(analysis.costBreakdown.totalCostPerTonne * 83).toLocaleString()}
+              ₹{(analysis.costBreakdown.totalCostPerTonne).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground font-medium">
               Transportation Cost • Optimized Rate
@@ -426,28 +426,28 @@ const PortToPlant: React.FC<PortToPlantProps> = ({ vesselId, onLoadComplete }) =
                     <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                     <span className="font-medium">Rail Transport</span>
                   </div>
-                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.totalRailTransportCost * 83).toLocaleString()}</span>
+                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.totalRailTransportCost).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 rounded-lg bg-green-50 border border-green-200">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
                     <span className="font-medium">Port Handling</span>
                   </div>
-                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.portHandlingCost * 83).toLocaleString()}</span>
+                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.portHandlingCost).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 rounded-lg bg-amber-50 border border-amber-200">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-amber-500"></div>
                     <span className="font-medium">Storage</span>
                   </div>
-                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.storageCost * 83).toLocaleString()}</span>
+                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.storageCost).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 rounded-lg bg-red-50 border border-red-200">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-red-500"></div>
                     <span className="font-medium">Demurrage</span>
                   </div>
-                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.demurrageCost * 83).toLocaleString()}</span>
+                  <span className="font-bold text-lg">₹{(analysis.costBreakdown.demurrageCost).toLocaleString()}</span>
                 </div>
                 <Separator className="my-4" />
                 <div className="flex justify-between items-center p-4 rounded-lg bg-slate-100 border border-slate-200">
@@ -457,7 +457,7 @@ const PortToPlant: React.FC<PortToPlantProps> = ({ vesselId, onLoadComplete }) =
                     analysis.costBreakdown.portHandlingCost + 
                     analysis.costBreakdown.storageCost + 
                     analysis.costBreakdown.demurrageCost
-                  ) * 83).toLocaleString()}</span>
+                  )).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -1018,7 +1018,7 @@ const PortToPlant: React.FC<PortToPlantProps> = ({ vesselId, onLoadComplete }) =
                   </div>
                   <div className="text-center lg:text-right">
                     <p className="text-4xl font-bold text-green-800 mb-1">
-                      ₹{(analysis.optimizationRecommendations.potentialSavings * 83).toLocaleString()}
+                      ₹{(analysis.optimizationRecommendations.potentialSavings).toLocaleString()}
                     </p>
                     <p className="text-sm text-green-600 font-semibold">Annual Savings Potential</p>
                   </div>

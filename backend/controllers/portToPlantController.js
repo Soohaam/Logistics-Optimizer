@@ -1,4 +1,5 @@
 // controllers/portToPlantController.js
+const mongoose = require('mongoose');
 const PortToPlant = require('../models/PortToPlant');
 const Vessel = require('../models/Vessel');
 const geminiService = require('../services/geminiService');
@@ -9,8 +10,18 @@ const portToPlantController = {
     try {
       const { vesselId } = req.params;
 
+      // Validate vesselId is a valid ObjectId string
+      if (!mongoose.Types.ObjectId.isValid(vesselId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid vesselId format'
+        });
+      }
+
+      const objectId = new mongoose.Types.ObjectId(vesselId);
+
       // First check if analysis already exists
-      let existingAnalysis = await PortToPlant.findOne({ vesselId });
+      let existingAnalysis = await PortToPlant.findOne({ vesselId: objectId });
       
       if (existingAnalysis) {
         return res.json({
@@ -21,7 +32,7 @@ const portToPlantController = {
       }
 
       // If no existing analysis, fetch vessel data and create new analysis
-      const vessel = await Vessel.findById(vesselId);
+      const vessel = await Vessel.findById(objectId);
       
       if (!vessel) {
         return res.status(404).json({
@@ -77,8 +88,18 @@ const portToPlantController = {
     try {
       const { vesselId } = req.params;
 
+      // Validate vesselId is a valid ObjectId string
+      if (!mongoose.Types.ObjectId.isValid(vesselId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid vesselId format'
+        });
+      }
+
+      const objectId = new mongoose.Types.ObjectId(vesselId);
+
       // Delete existing analysis
-      await PortToPlant.findOneAndDelete({ vesselId });
+      await PortToPlant.findOneAndDelete({ vesselId: objectId });
 
       // Redirect to get analysis (will create new one)
       req.params.vesselId = vesselId;
