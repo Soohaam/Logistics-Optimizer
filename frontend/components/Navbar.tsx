@@ -8,6 +8,7 @@ import { Bell } from "lucide-react";
 
 const Navbar: React.FC = () => {
   const navLinks = [
+    { name: "Home", href: "/" },
     { name: "Dashboard", href: "/vessel-manager" },
     { name: "Simulation", href: "/simulation" },
     { name: "Map", href: "/map" },
