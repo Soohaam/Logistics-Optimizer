@@ -407,27 +407,11 @@ export function GlobeDemo() {
   ];
 
   return (
-    <div className="flex flex-row items-center justify-center h-screen relative w-full bg-transparent">
-      <div className="max-w-7xl mx-auto w-full relative overflow-hidden h-full">
-        <div className="absolute inset-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.8)_100%)] pointer-events-none z-20" />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.5 }}
-          className="relative z-30 text-center space-y-4 mt-20"
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="inline-block"
-          >
-            
-          </motion.div>
-
-        </motion.div>
-        <div className="absolute w-full bottom-0 inset-x-0 h-[50vh] bg-gradient-to-t from-black/80 to-transparent z-30 pointer-events-none" />
-        <div className="absolute w-full h-full inset-0 z-10">
+    <div className="relative w-full h-full flex items-center justify-center bg-transparent">
+      {/* Container that maintains aspect ratio and centers the globe */}
+      <div className="relative w-full h-full max-w-full max-h-full aspect-square mx-auto">
+        {/* Remove all background overlays and positioning constraints */}
+        <div className="absolute inset-0 w-full h-full">
           <World data={sampleArcs} globeConfig={globeConfig} />
         </div>
       </div>
