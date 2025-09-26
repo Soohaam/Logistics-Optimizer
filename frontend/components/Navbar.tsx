@@ -45,22 +45,23 @@ const Navbar: React.FC = () => {
           </div>
 
           {/* Right Section - Notification and Avatar */}
-          <div className="flex items-center space-x-3 min-w-[80px] pr-2 sm:pr-4 lg:pr-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-[#162959] hover:text-[#162959]/80 hover:bg-[#162959]/10 relative"
-            >
-              <Bell className="h-7 w-7" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs"></span>
-            </Button>
-            <Avatar className="h-12 w-12 border-2 border-[#162959]/20">
-              <AvatarImage src="" alt="User" />
-              <AvatarFallback className="bg-[#162959] text-white text-sm font-medium">
-                U
-              </AvatarFallback>
-            </Avatar>
-          </div>
+<div className="flex items-center space-x-3 min-w-[80px] pr-2 sm:pr-4 lg:pr-6">
+  <Button
+    variant="ghost"
+    size="icon"
+    className="text-[#162959] hover:text-[#162959]/80 hover:bg-[#162959]/10 relative"
+  >
+    <Bell className="h-14 w-14" /> {/* Increased size */}
+    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs"></span>
+  </Button>
+  <Avatar className="h-12 w-12 border-2 border-[#162959]/20">
+    <AvatarImage src="" alt="User" />
+    <AvatarFallback className="bg-[#162959] text-white text-sm font-medium">
+      U
+    </AvatarFallback>
+  </Avatar>
+</div>
+
         </div>
       </div>
     </nav>
