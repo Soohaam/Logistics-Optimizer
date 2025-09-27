@@ -1618,6 +1618,27 @@ const VesselManager: React.FC = () => {
                     ))}
                   </div>
                 )}
+                <div className="flex justify-between pt-8 border-t border-slate-200">
+                <Button
+                  onClick={goToPreviousTab}
+                  disabled={activeTab === tabOrder[0]}
+                  variant="outline"
+                  className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
+                  size="lg"
+                >
+                  <ChevronLeft className="h-6 w-6 mr-2" />
+                  Previous
+                </Button>
+                <Button
+                  onClick={goToNextTab}
+                  disabled={activeTab === tabOrder[tabOrder.length - 1]}
+                  className="bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  size="lg"
+                >
+                  Next
+                  <ChevronRight className="h-6 w-6 ml-2" />
+                </Button>
+              </div>
               </div>
             </TabsContent>
 
