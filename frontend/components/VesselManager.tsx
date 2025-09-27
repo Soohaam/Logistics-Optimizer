@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  Zap,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -118,10 +119,10 @@ const VesselManager: React.FC = () => {
 
   const tabOrder = ["general", "parcels", "costs", "rail"]
   const tabLabels = {
-    general: "Vessel Details",
-    parcels: "Delay Prediction",
-    costs: "Port To-Plant",
-    rail: "Optimization",
+    general: "General Info",
+    parcels: "Parcel Form",
+    costs: "Cost Parameters",
+    rail: "Rail Data",
   }
 
   // CSV Upload Modal Component
@@ -465,6 +466,76 @@ const VesselManager: React.FC = () => {
     },
     portPreferences: [],
   })
+
+  // Demo data filling function
+  const fillWithDemoData = () => {
+    setNewVessel({
+      name: "MV Ocean Star",
+      capacity: 50000,
+      ETA: "2025-12-20",
+      laydays: {
+        start: "2025-12-18",
+        end: "2025-12-22",
+      },
+      loadPort: "Paradip",
+      supplier: {
+        name: "BHP",
+        country: "Australia",
+      },
+      parcels: [
+        {
+          id: Date.now().toString(),
+          size: 25000,
+          loadPort: "Paradip",
+          materialType: "Coking Coal",
+          qualityGrade: "Hard coking coal (high vitrinite, low ash)",
+          qualitySpecs: "Ash < 10%, Vitrinite > 60%, CSR > 65",
+          plantAllocations: [
+            {
+              plantName: "Rourkela Steel Plant (RSP)",
+              requiredQuantity: 12000,
+              plantStockAvailability: 5000,
+            },
+          ],
+        },
+      ],
+      costParameters: {
+        fringeOcean: 100,
+        fringeRail: 200,
+        demurrageRate: 5000,
+        maxPortCalls: 2,
+        portHandlingFees: 1000,
+        storageCost: 50,
+        freeTime: 3,
+        portDifferentialCost: 200,
+      },
+      railData: {
+        rakeCapacity: 4000,
+        loadingTimePerDay: 8000,
+        availability: true,
+        numberOfRakesRequired: 3,
+      },
+      portPreferences: [
+        {
+          portName: "Haldia Port",
+          sequentialDischarge: true,
+          dischargeOrder: ["Haldia Port", "Visakhapatnam (Vizag) Port"],
+          portStockAvailability: 20000,
+        },
+        {
+          portName: "Visakhapatnam (Vizag) Port",
+          sequentialDischarge: false,
+          dischargeOrder: ["Visakhapatnam (Vizag) Port"],
+          portStockAvailability: 15000,
+        },
+      ],
+    })
+
+    setMessage({
+      type: "success",
+      text: "Demo data filled successfully! You can now review and modify the data before creating the vessel.",
+    })
+  }
 
   // Dropdown data
   const materialTypes = ["Coking Coal", "Limestone", "Dolomite", "Manganese Ore"]
@@ -1009,14 +1080,24 @@ const VesselManager: React.FC = () => {
             Create a comprehensive vessel record with detailed specifications
           </p>
         </div>
-        <Button
-          onClick={() => setShowForm(false)}
-          variant="outline"
-          className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors"
-          size="lg"
-        >
-          Cancel
-        </Button>
+        <div className="flex gap-4">
+          <Button
+            onClick={fillWithDemoData}
+            className="bg-green-600 hover:bg-green-700 shadow-lg text-white px-8 py-4 text-lg rounded-xl transition-colors"
+            size="lg"
+          >
+            <Zap className="h-6 w-6 mr-3" />
+            Quick Fill Demo Data
+          </Button>
+          <Button
+            onClick={() => setShowForm(false)}
+            variant="outline"
+            className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+            size="lg"
+          >
+            Cancel
+          </Button>
+        </div>
       </div>
 
       {validationAlert && (
@@ -1036,28 +1117,28 @@ const VesselManager: React.FC = () => {
                 className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
                 <Ship className="h-6 w-6" />
-                Vessel Details
+                General Info
               </TabsTrigger>
               <TabsTrigger
                 value="parcels"
                 className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
                 <Package className="h-6 w-6" />
-                Delay Prediction
+                Parcel Form
               </TabsTrigger>
               <TabsTrigger
                 value="costs"
                 className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
                 <Settings className="h-6 w-6" />
-                Port To-Plant
+                Cost Parameters
               </TabsTrigger>
               <TabsTrigger
                 value="rail"
                 className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
                 <Train className="h-6 w-6" />
-                Optimization
+                Rail Data
               </TabsTrigger>
             </TabsList>
 
@@ -1081,7 +1162,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.name}
                       onChange={(e) => setNewVessel({ ...newVessel, name: e.target.value })}
                       placeholder="e.g., MV Ocean Star"
-                      className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1094,7 +1175,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.capacity || ""}
                       onChange={(e) => setNewVessel({ ...newVessel, capacity: Number(e.target.value) })}
                       placeholder="e.g., 50000"
-                      className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1107,7 +1188,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.ETA}
                       onChange={(e) => setNewVessel({ ...newVessel, ETA: e.target.value })}
                       min={new Date().toISOString().split("T")[0]}
-                      className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1119,7 +1200,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.loadPort}
                       onChange={(e) => setNewVessel({ ...newVessel, loadPort: e.target.value })}
                       placeholder="Enter load port name"
-                      className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1136,7 +1217,7 @@ const VesselManager: React.FC = () => {
                           laydays: { ...newVessel.laydays, start: e.target.value },
                         })
                       }
-                      className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1154,7 +1235,7 @@ const VesselManager: React.FC = () => {
                         })
                       }
                       min={newVessel.laydays.start}
-                      className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -1185,7 +1266,7 @@ const VesselManager: React.FC = () => {
                         })
                       }
                       placeholder="e.g., BHP Billiton"
-                      className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1292,7 +1373,7 @@ const VesselManager: React.FC = () => {
                               value={parcel.size || ""}
                               onChange={(e) => updateParcel(parcel.id, "size", Number(e.target.value))}
                               placeholder="e.g., 25000"
-                              className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                              className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                             />
                           </div>
                           <div className="space-y-4">
@@ -1301,7 +1382,7 @@ const VesselManager: React.FC = () => {
                               value={parcel.loadPort || ""}
                               onChange={(e) => updateParcel(parcel.id, "loadPort", e.target.value)}
                               placeholder="Enter load port name"
-                              className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                              className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                             />
                           </div>
                           <div className="space-y-4">
@@ -1412,7 +1493,7 @@ const VesselManager: React.FC = () => {
                                             )
                                           }
                                           placeholder="MT"
-                                          className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                                          className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                                         />
                                       </div>
                                       <div className="space-y-4">
@@ -1441,7 +1522,7 @@ const VesselManager: React.FC = () => {
                                             )
                                           }
                                           placeholder="MT"
-                                          className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                                          className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                                         />
                                       </div>
                                     </div>
@@ -1456,10 +1537,8 @@ const VesselManager: React.FC = () => {
                   ))}
                 </div>
               )}
-            </TabsContent>
 
-            {/* Port Preferences */}
-            <TabsContent value="parcels" className="space-y-10">
+              {/* Port Preferences Section */}
               <div className="space-y-10">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-4">
@@ -1539,7 +1618,7 @@ const VesselManager: React.FC = () => {
                                   updatePortPreference(index, "portStockAvailability", Number(e.target.value))
                                 }
                                 placeholder="Enter stock availability in MT"
-                                className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                                className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                               />
                             </div>
                           </div>
@@ -1619,26 +1698,26 @@ const VesselManager: React.FC = () => {
                   </div>
                 )}
                 <div className="flex justify-between pt-8 border-t border-slate-200">
-                <Button
-                  onClick={goToPreviousTab}
-                  disabled={activeTab === tabOrder[0]}
-                  variant="outline"
-                  className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
-                  size="lg"
-                >
-                  <ChevronLeft className="h-6 w-6 mr-2" />
-                  Previous
-                </Button>
-                <Button
-                  onClick={goToNextTab}
-                  disabled={activeTab === tabOrder[tabOrder.length - 1]}
-                  className="bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  size="lg"
-                >
-                  Next
-                  <ChevronRight className="h-6 w-6 ml-2" />
-                </Button>
-              </div>
+                  <Button
+                    onClick={goToPreviousTab}
+                    disabled={activeTab === tabOrder[0]}
+                    variant="outline"
+                    className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
+                    size="lg"
+                  >
+                    <ChevronLeft className="h-6 w-6 mr-2" />
+                    Previous
+                  </Button>
+                  <Button
+                    onClick={goToNextTab}
+                    disabled={activeTab === tabOrder[tabOrder.length - 1]}
+                    className="bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    size="lg"
+                  >
+                    Next
+                    <ChevronRight className="h-6 w-6 ml-2" />
+                  </Button>
+                </div>
               </div>
             </TabsContent>
 
@@ -1663,7 +1742,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter fringe ocean cost"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1678,7 +1757,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter fringe rail cost"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1693,7 +1772,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter demurrage rate"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1707,8 +1786,8 @@ const VesselManager: React.FC = () => {
                         costParameters: { ...newVessel.costParameters, maxPortCalls: Number(e.target.value) },
                       })
                     }
-                    placeholder="Enter max port calls"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    placeholder="Enter maximum port calls"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1723,7 +1802,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter port handling fees"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1738,7 +1817,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter storage cost"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1753,7 +1832,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter free time in days"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1768,7 +1847,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter port differential cost"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
@@ -1817,7 +1896,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter rake capacity in MT"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1832,7 +1911,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter loading time per day"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1847,7 +1926,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter number of rakes required"
-                    className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="flex items-center space-x-4 pt-8">
