@@ -143,21 +143,6 @@ const VesselPrediction: React.FC = () => {
     router.back();
   };
 
-  const handleViewRoute = () => {
-    if (vesselDetails) {
-      // Construct route data from vessel details
-      const routeData = {
-        loadingCountry: vesselDetails.supplier.country,
-        loadPort: vesselDetails.loadPort,
-        portPreferences: vesselDetails.portPreferences,
-        plantAllocations: vesselDetails.parcels.flatMap(parcel => parcel.plantAllocations),
-        vesselName: vesselDetails.name
-      };
-      
-      // Navigate to ImportRoute component with data
-      router.push(`/ImportRoute/${vesselId}?data=${encodeURIComponent(JSON.stringify(routeData))}`);
-    }
-  };
 
   const isNextDisabled = () => {
     if (activeTab === 'delay-prediction' && !delayPredictionLoaded) return true;
@@ -252,15 +237,7 @@ const VesselPrediction: React.FC = () => {
             Back
           </Button>
           
-          {vesselDetails && (
-            <Button
-              onClick={handleViewRoute}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2 transition-all duration-200 shadow-sm"
-            >
-              <Map className="h-5 w-5 mr-2" />
-              View Route
-            </Button>
-          )}
+          
         </div>
         
         <Button
