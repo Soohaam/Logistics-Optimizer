@@ -572,9 +572,9 @@ const VesselPrediction: React.FC = () => {
                         <div>
                           <p className="text-sm font-semibold text-blue-600 mb-2">Stock Shortfall</p>
                           <p
-                            className={`text-3xl font-bold ${metrics?.stockShortfall > 0 ? "text-red-600" : "text-emerald-600"}`}
+                            className={`text-3xl font-bold ${(metrics?.stockShortfall ?? 0) > 0 ? "text-red-600" : "text-emerald-600"}`}
                           >
-                            {metrics?.stockShortfall > 0 ? `${metrics.stockShortfall.toLocaleString()} MT` : "None"}
+                            {(metrics?.stockShortfall ?? 0) > 0 ? `${metrics?.stockShortfall?.toLocaleString()} MT` : "None"}
                           </p>
                         </div>
                       </div>

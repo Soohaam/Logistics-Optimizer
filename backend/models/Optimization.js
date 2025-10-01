@@ -186,7 +186,9 @@ const optimizationSchema = new mongoose.Schema({
     totalComputationTime: Number,
     dataQualityScore: Number,
     aiModelVersion: String,
-    lastUpdated: Date
+    lastUpdated: Date,
+    cacheHit: Boolean,
+    fallbackComponents: Number
   }
 }, {
   timestamps: true

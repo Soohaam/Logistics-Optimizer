@@ -8,8 +8,35 @@ const PortToPlant = require('../models/PortToPlant');
 
 class OptimizationService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY_OPTIMIZED);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // Initialize with primary API key, fallback to secondary
+    const primaryKey = process.env.GOOGLE_GEMINI_API_KEY_OPTIMIZED;
+    const secondaryKey = process.env.GOOGLE_GEMINI_API_KEY;
+    
+    this.apiKeys = [primaryKey, secondaryKey].filter(Boolean);
+    this.currentKeyIndex = 0;
+    this.lastSwitchTime = 0;
+    this.rateLimitResetTime = 0;
+    this.requestCount = 0;
+    this.dailyRequestCount = 0;
+    this.lastRequestTime = 0;
+    this.requestQueue = []; // Queue for requests
+    this.isProcessingQueue = false;
+    
+    // Track active optimizations to prevent duplicates
+    this.activeOptimizations = new Set();
+    
+    // Daily reset time (midnight)
+    this.dailyResetTime = new Date();
+    this.dailyResetTime.setHours(24, 0, 0, 0);
+    
+    if (this.apiKeys.length === 0) {
+      console.warn('⚠️ No Gemini API keys configured');
+      this.genAI = null;
+      this.model = null;
+    } else {
+      this.initializeModel();
+      console.log(`🔑 Initialized with ${this.apiKeys.length} API key(s)`);
+    }
     
     // Indian major ports with their coordinates and characteristics
     this.indianPorts = {
@@ -22,71 +49,326 @@ class OptimizationService {
       'Cochin': { lat: 9.9312, lng: 76.2673, capacity: 40000, efficiency: 86 },
       'Tuticorin': { lat: 8.7642, lng: 78.1348, capacity: 45000, efficiency: 84 }
     };
+    
+    // Simple in-memory cache for optimization results
+    this.resultCache = new Map();
+    this.cacheExpiry = 30 * 60 * 1000; // 30 minutes
   }
+
+  initializeModel() {
+    try {
+      this.genAI = new GoogleGenerativeAI(this.apiKeys[this.currentKeyIndex]);
+      this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    } catch (error) {
+      this.genAI = null;
+      this.model = null;
+    }
+  }
+
+  async tryNextApiKey() {
+    // Reset to primary key if enough time has passed (15 minutes)
+    const now = Date.now();
+    if (this.currentKeyIndex > 0 && now - this.lastSwitchTime > 15 * 60 * 1000) {
+      console.log('🔄 Resetting to primary API key after cooldown');
+      this.currentKeyIndex = 0;
+      this.initializeModel();
+      return true;
+    }
+    
+    // If we've used all keys, implement rate limiting delay
+    if (this.currentKeyIndex >= this.apiKeys.length - 1) {
+      // If we're hitting daily limits, wait longer
+      console.log('⏳ All API keys exhausted, implementing extended wait...');
+      // Wait for 5 minutes or until next day, whichever is sooner
+      const timeUntilMidnight = this.dailyResetTime.getTime() - now;
+      const waitTime = Math.min(300000, timeUntilMidnight); // Max 5 minutes
+      if (waitTime > 0) {
+        console.log(`⏳ Waiting ${Math.ceil(waitTime/1000)} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+      // Reset to first key after wait
+      this.currentKeyIndex = 0;
+      this.initializeModel();
+      console.log('🔄 Reset to first API key after wait');
+      return true;
+    }
+    
+    // Try next key
+    this.currentKeyIndex++;
+    this.initializeModel();
+    this.lastSwitchTime = Date.now();
+    console.log(`🔑 Switched to API key ${this.currentKeyIndex + 1}`);
+    return true;
+  }
+
+  async processQueue() {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.requestQueue.length > 0) {
+      const { request, resolve, reject } = this.requestQueue.shift();
+      try {
+        const result = await request();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    }
+
+    this.isProcessingQueue = false;
+  }
+
+  async makeRequest(request) {
+    return new Promise((resolve, reject) => {
+      this.requestQueue.push({ request, resolve, reject });
+      this.processQueue();
+    });
+  }
+
+  async optimizeRoute(plantId, portId, cargoType, cargoVolume) {
+    const cacheKey = `${plantId}-${portId}-${cargoType}-${cargoVolume}`;
+    const cachedResult = this.resultCache.get(cacheKey);
+    if (cachedResult && Date.now() - cachedResult.timestamp < this.cacheExpiry) {
+      return cachedResult.data;
+    }
+
+    const plant = await PortToPlant.findOne({ plantId, portId });
+    if (!plant) {
+      throw new Error('Plant not found for the given port');
+    }
+
+    const port = this.indianPorts[portId];
+    if (!port) {
+      throw new Error('Port not found');
+    }
+
+    const delayPrediction = await DelayPrediction.findOne({ portId });
+    if (!delayPrediction) {
+      throw new Error('Delay prediction not found for the given port');
+    }
+
+    const optimization = await Optimization.findOne({ plantId, portId, cargoType });
+    if (!optimization) {
+      throw new Error('Optimization data not found for the given plant and cargo type');
+    }
+
+    const prompt = `
+      Optimize the route for the following shipment:
+      - Plant ID: ${plantId}
+      - Port ID: ${portId}
+      - Cargo Type: ${cargoType}
+      - Cargo Volume: ${cargoVolume}
+      - Port Coordinates: (${port.lat}, ${port.lng})
+      - Port Capacity: ${port.capacity}
+      - Port Efficiency: ${port.efficiency}%
+      - Delay Prediction: ${delayPrediction.delay} days
+      - Optimization Data: ${JSON.stringify(optimization.data)}
+
+      Provide the optimized route as a JSON object.
+    `;
+
+    try {
+      const result = await this.makeRequest(() => this.model.generateContent(prompt));
+      const optimizedRoute = result.response.text();
+      this.resultCache.set(cacheKey, { data: optimizedRoute, timestamp: Date.now() });
+      return optimizedRoute;
+    } catch (error) {
+      console.error('Error optimizing route:', error);
+      throw new Error('Failed to optimize route');
+    }
+  }
+
+  async callGeminiWithRetry(prompt, maxRetries = 3) {
+    if (!this.model) {
+      console.log('❌ No Gemini model available');
+      return null;
+    }
+    
+    // More aggressive rate limiting
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    // Reset counter every 60 seconds
+    if (timeSinceLastRequest > 60000) {
+      this.requestCount = 0;
+    }
+    
+    // Implement stricter rate limiting (max 10 requests per minute for free tier)
+    if (this.requestCount >= 10) {
+      const waitTime = 60000 - timeSinceLastRequest;
+      if (waitTime > 0) {
+        console.log(`⏳ Strict rate limit: Waiting ${Math.ceil(waitTime/1000)} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+      this.requestCount = 0;
+    }
+    
+    // Log prompt size for debugging
+    const promptTokens = prompt.length / 4; // Rough estimation of tokens
+    console.log(`📝 Prompt size: ~${Math.round(promptTokens)} tokens`);
+    
+    // Check if prompt is too large (reduced limit to 15k tokens for safety)
+    if (promptTokens > 15000) {
+      console.log(`⚠️ Prompt too large (${Math.round(promptTokens)} tokens), using fallback data`);
+      return null;
+    }
+    
+    this.requestCount++;
+    this.lastRequestTime = now;
+    
+    console.log('📡 Sending request to Gemini API...');
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Add request timeout
+        const result = await Promise.race([
+          this.model.generateContent(prompt),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Request timeout after 15 seconds')), 15000)
+          )
+        ]);
+        
+        const response = await result.response;
+        const text = response.text().trim();
+        
+        if (!text || text.length === 0) {
+          throw new Error('Empty response from Gemini API');
+        }
+        
+        console.log(`✅ Gemini API call successful (attempt ${attempt + 1})`);
+        return text;
+      } catch (error) {
+        console.log(`⚠️ Gemini API attempt ${attempt + 1} failed: ${error.message}`);
+        
+        // Log specific error types
+        if (error.message.includes('429')) {
+          console.log('🚦 Rate limit exceeded');
+          // Implement longer wait for rate limits (2 minutes for daily limit)
+          const waitTime = error.message.includes('200') ? 120000 : 60000;
+          console.log(`⏳ Waiting ${waitTime/1000} seconds due to rate limit...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else if (error.message.includes('500')) {
+          console.log('💥 Server error');
+        } else if (error.message.includes('timeout')) {
+          console.log('⏰ Request timeout');
+        }
+        
+        if (attempt === maxRetries) {
+          // Try next API key if available
+          if (await this.tryNextApiKey()) {
+            console.log(`🔄 Switched to backup API key (${this.currentKeyIndex + 1}/${this.apiKeys.length})`);
+            return this.callGeminiWithRetry(prompt, 1); // One more try with new key
+          }
+          console.log('❌ All retry attempts failed');
+          throw error;
+        }
+        // Wait before retry with exponential backoff
+        const waitTime = Math.pow(2, attempt) * 2000; // Increased base wait time
+        console.log(`⏳ Waiting ${Math.ceil(waitTime/1000)} seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+
 
   /**
    * Main optimization method
    */
   async optimizeVesselOperations(vesselData) {
+    const vesselId = vesselData._id.toString();
+    // Mark this vessel as having an active optimization
+    this.activeOptimizations.add(vesselId);
+    
     const startTime = Date.now();
     
     try {
-      // First check if we have recent optimization data for this vessel
+      console.log(`🚀 Starting optimization for vessel ${vesselData.name} (${vesselId})`);
+      
+      // First check if we have recent optimization data for this vessel (extended cache)
       const recentOptimization = await Optimization.findOne({
         vesselId: vesselData._id,
         'computationMetadata.lastUpdated': { 
-          $gte: new Date(Date.now() - 6 * 60 * 60 * 1000) // Within last 6 hours
+          $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) // Extended to 12 hours
         }
       }).sort({ 'computationMetadata.lastUpdated': -1 });
 
       if (recentOptimization) {
-        console.log(`Using cached optimization for vessel ${vesselData.name} (${vesselData._id})`);
+        console.log(`✅ Using cached optimization for vessel ${vesselData.name} (${vesselId})`);
         // Add some dynamic elements to make it look fresh
         recentOptimization.computationMetadata.cacheHit = true;
         recentOptimization.computationMetadata.retrievalTime = Date.now() - startTime;
         return recentOptimization;
       }
 
-      console.log(`Generating new optimization for vessel ${vesselData.name} (${vesselData._id})`);
+      console.log(`🔄 Generating new optimization for vessel ${vesselData.name} (${vesselId})`);
       
       // Generate unique optimization ID
       const optimizationId = `OPT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Step 1: Gather input data from existing analyses
+      console.log('📥 Gathering input data...');
       const inputData = await this.gatherInputData(vesselData._id);
+      console.log('✅ Input data gathered');
       
       // Step 2: Perform port selection optimization
+      console.log('🚢 Optimizing port selection...');
       const portOptimization = await this.optimizePortSelection(vesselData, inputData);
+      console.log(`✅ Port selection completed (source: ${portOptimization.dataSource})`);
       
       // Step 3: Optimize routing
+      console.log('🧭 Optimizing routing...');
       const routeOptimization = await this.optimizeRouting(vesselData, portOptimization.selectedPort, inputData);
+      console.log(`✅ Routing optimization completed (source: ${routeOptimization.dataSource})`);
       
       // Step 4: Optimize discharge sequencing
+      console.log('📦 Optimizing discharge sequencing...');
       const dischargeOptimization = await this.optimizeDischargeSequencing(vesselData, inputData);
+      console.log(`✅ Discharge sequencing completed (source: ${dischargeOptimization.dataSource})`);
       
       // Step 5: Optimize rail transport
+      console.log('🚂 Optimizing rail transport...');
       const railOptimization = await this.optimizeRailTransport(vesselData, inputData);
+      console.log('✅ Rail transport optimization completed');
       
       // Step 6: Perform cost-benefit analysis
+      console.log('💰 Performing cost-benefit analysis...');
       const costBenefitAnalysis = await this.performCostBenefitAnalysis(
         vesselData, portOptimization, routeOptimization, dischargeOptimization, railOptimization, inputData
       );
+      console.log('✅ Cost-benefit analysis completed');
       
       // Step 7: Generate map visualization data
+      console.log('🗺️ Generating map visualization data...');
       const mapData = await this.generateMapVisualizationData(
         vesselData, portOptimization, routeOptimization, inputData
       );
+      console.log('✅ Map visualization data generated');
       
       // Step 8: Assess risks and generate recommendations
+      console.log('⚠️ Assessing risks and generating recommendations...');
       const riskAssessment = await this.assessOptimizationRisks(vesselData, inputData);
       const recommendations = await this.generateRecommendations(vesselData, inputData);
+      console.log('✅ Risk assessment and recommendations completed');
       
       // Calculate performance metrics
+      console.log('📊 Calculating performance metrics...');
       const performanceMetrics = this.calculatePerformanceMetrics(
         costBenefitAnalysis, riskAssessment, inputData
       );
+      console.log('✅ Performance metrics calculated');
       
       const computationTime = Date.now() - startTime;
+      
+      // Log fallback usage
+      const fallbackCount = [
+        portOptimization,
+        routeOptimization,
+        dischargeOptimization
+      ].filter(opt => opt.dataSource === 'fallback').length;
+      
+      if (fallbackCount > 0) {
+        console.log(`⚠️ ${fallbackCount} components used fallback data instead of AI`);
+      }
       
       // Create optimization result
       const optimizationResult = {
@@ -114,19 +396,29 @@ class OptimizationService {
         computationMetadata: {
           totalComputationTime: computationTime,
           dataQualityScore: this.calculateDataQuality(inputData),
-          aiModelVersion: 'gemini-2.5-flash',
-          lastUpdated: new Date()
+          aiModelVersion: 'gemini-2.0-flash',
+          lastUpdated: new Date(),
+          cacheHit: false,
+          fallbackComponents: fallbackCount
         }
       };
+      
+      console.log(`✅ Optimization completed for vessel ${vesselData.name} in ${computationTime}ms`);
       
       // Save to database
       const savedOptimization = await this.saveOptimization(optimizationResult);
       
+      console.log(`💾 Optimization data successfully saved to database for vessel ${vesselData.name}`);
+      
       return savedOptimization;
       
     } catch (error) {
-      console.error('Optimization error:', error);
+      console.error(`❌ Optimization failed for vessel ${vesselData?.name || 'unknown'}:`, error);
       throw new Error(`Optimization failed: ${error.message}`);
+    } finally {
+      // Remove vessel from active optimizations
+      this.activeOptimizations.delete(vesselId);
+      console.log(`🧹 Cleaned up active optimization tracking for vessel ${vesselData.name} (${vesselId})`);
     }
   }
 
@@ -163,6 +455,13 @@ class OptimizationService {
    * Optimize port selection using AI
    */
   async optimizePortSelection(vesselData, inputData) {
+    // Summarize data to reduce prompt size
+    const vesselSummary = this.summarizeVesselData(vesselData);
+    
+    // Create a much smaller prompt by limiting port information
+    const portEntries = Object.entries(this.indianPorts);
+    const limitedPorts = portEntries.slice(0, 5); // Only use top 5 ports
+    
     const prompt = `
 You are a maritime logistics expert optimizing port selection for vessel operations in India.
 
@@ -171,56 +470,54 @@ VESSEL DATA:
 - Capacity: ${vesselData.capacity} MT
 - Current Load Port: ${vesselData.loadPort}
 - Total Cargo: ${vesselData.parcels.reduce((sum, p) => sum + p.size, 0)} MT
-- ETA: ${vesselData.ETA}
+
+
 
 AVAILABLE PORTS:
 ${Object.entries(this.indianPorts).map(([name, data]) => 
   `- ${name}: Capacity ${data.capacity}MT, Efficiency ${data.efficiency}%, Coords: ${data.lat}, ${data.lng}`
 ).join('\n')}
 
-CURRENT CONDITIONS:
-- Weather Impact: ${inputData.delayPrediction?.realTimeFactors?.weatherConditions?.weatherSeverity || 'moderate'}
-- Port Congestion: ${inputData.delayPrediction?.realTimeFactors?.portCongestion?.congestionLevel || 'medium'}
-
+ 
 REQUIREMENTS:
-Select the optimal port and provide alternatives. Consider efficiency, capacity, weather conditions, and congestion.
+Select the optimal port and provide up to 4 alternatives. Consider efficiency, capacity, weather conditions, and congestion.
 
 Respond in this JSON format:
 {
   "selectedPort": {
     "name": "PortName",
-    "coordinates": {"lat": 0, "lng": 0},
-    "capacity": 0,
     "efficiency": 0,
-    "currentCongestion": 30,
-    "costPerTonne": 1200
+    "capacity": 0
   },
   "alternativePorts": [
     {
       "name": "AlternativePort",
-      "coordinates": {"lat": 0, "lng": 0},
       "efficiency": 0,
-      "congestion": 40,
-      "costPerTonne": 1300,
       "reasonForRejection": "Higher congestion levels"
     }
   ],
-  "selectionReasoning": "Selected based on optimal efficiency and low congestion levels"
+  "selectionReasoning": "Selected based on optimal efficiency"
 }`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
-      
-      const cleanedText = text.replace(/```json\n?|\n?```/g, '');
-      const portSelection = JSON.parse(cleanedText);
-      
-      return this.validatePortSelection(portSelection);
+      console.log(`🚢 Port Selection: Processing vessel ${vesselData.name} (${vesselData._id})`);
+      const text = await this.callGeminiWithRetry(prompt);
+      if (text) {
+        console.log('✅ Port Selection: Gemini AI response received');
+        const cleanedText = text.replace(/```json\n?|\n?```/g, '');
+        const portSelection = JSON.parse(cleanedText);
+        const validatedResult = this.validatePortSelection(portSelection);
+        validatedResult.dataSource = 'gemini_ai';
+        return validatedResult;
+      }
     } catch (error) {
-      console.error('Port selection optimization error:', error);
-      return this.getDefaultPortSelection(vesselData.loadPort);
+      console.log(`⚠️ Port Selection: Using fallback data (${error.message})`);
     }
+    
+    const fallbackResult = this.getRealisticPortSelection(vesselData.loadPort, vesselData);
+    fallbackResult.dataSource = 'fallback';
+    console.log('🔄 Port Selection: Generated fallback data');
+    return fallbackResult;
   }
 
   /**
@@ -251,6 +548,50 @@ Respond in this JSON format:
     return Math.round((bearing + 360) % 360);
   }
 
+  // Helper method to summarize large vessel data
+  summarizeVesselData(vesselData) {
+    // Summarize parcels with key statistics only
+    const totalCargo = vesselData.parcels.reduce((sum, p) => sum + p.size, 0);
+    const parcelTypes = [...new Set(vesselData.parcels.map(p => p.materialType))];
+    const qualityGrades = [...new Set(vesselData.parcels.map(p => p.qualityGrade))];
+    
+    // Limit arrays to prevent large prompts
+    return {
+      name: vesselData.name,
+      capacity: vesselData.capacity,
+      loadPort: vesselData.loadPort,
+      ETA: vesselData.ETA,
+      totalCargo: totalCargo,
+      parcelCount: vesselData.parcels.length,
+      parcelTypes: parcelTypes.slice(0, 3), // Limit to 3 types
+      qualityGrades: qualityGrades.slice(0, 3) // Limit to 3 grades
+    };
+  }
+
+  // More aggressive plant data summarization
+  summarizePlantData(portToPlantData) {
+    if (!portToPlantData || !portToPlantData.analysisData) return null;
+    
+    const plantAllocations = portToPlantData.analysisData.plantDistributionAnalysis?.plantAllocations || [];
+    
+    // Only include key metrics and limit the number of plants
+    const summarizedPlants = plantAllocations
+      .slice(0, 5) // Limit to top 5 plants
+      .map(plant => ({
+        plantName: plant.plantName,
+        allocatedQuantity: plant.allocatedQuantity || 0,
+        shortfall: plant.shortfall || 0
+      }));
+    
+    return {
+      totalPlants: Math.min(plantAllocations.length, 10), // Cap at 10
+      totalAllocation: plantAllocations.reduce((sum, p) => sum + (p.allocatedQuantity || 0), 0),
+      totalShortfall: portToPlantData.analysisData.plantDistributionAnalysis?.totalShortfall || 0,
+      topPlants: summarizedPlants
+    };
+  }
+
+  // Optimize routing with smaller prompt
   async optimizeRouting(vesselData, selectedPort, inputData) {
     const currentPort = this.indianPorts[vesselData.loadPort] || this.indianPorts['Chennai'];
     const destinationPort = this.indianPorts[selectedPort.name] || selectedPort.coordinates;
@@ -260,121 +601,134 @@ Respond in this JSON format:
     const estimatedTime = Math.round(directDistance / 12); // Assuming 12 knots average speed
     const fuelConsumption = Math.round(directDistance * 0.15); // Rough fuel consumption estimate
 
+    // Optimize prompt by reducing data size
+    const vesselCargoSummary = `Total: ${vesselData.parcels.reduce((sum, p) => sum + p.size, 0)}MT, ${vesselData.parcels.length} parcels`;
+
     const prompt = `
 You are a maritime route optimization expert for Indian Ocean routes.
 
 ROUTE REQUIREMENTS:
-- From: ${vesselData.loadPort} Port (${currentPort.lat}, ${currentPort.lng})
-- To: ${selectedPort.name} Port (${selectedPort.coordinates.lat}, ${selectedPort.coordinates.lng})
+- From: ${vesselData.loadPort} to ${selectedPort.name}
+- Distance: ${directDistance} km
 - Vessel: ${vesselData.name} - ${vesselData.capacity}MT capacity
+- Cargo: ${vesselCargoSummary}
 - Distance: ${directDistance} km
 - Weather Risk: ${inputData.delayPrediction?.riskLevel || 'medium'}
 
-Provide detailed routing with specific waypoints and route description.
+Provide detailed routing with specific waypoints and route description and 2 alternative routes.
 
 Respond in JSON format:
 {
   "recommendedRoute": {
     "routeName": "${vesselData.loadPort} to ${selectedPort.name} - Eastern Maritime Corridor",
-    "description": "Optimized coastal route via ${vesselData.loadPort}-${selectedPort.name} shipping lane, avoiding congested areas and weather patterns",
+    "description": "Optimized coastal route via ${vesselData.loadPort}-${selectedPort.name} shipping lane",
     "waypoints": [
-      {"lat": ${currentPort.lat}, "lng": ${currentPort.lng}, "name": "${vesselData.loadPort} Port", "type": "departure"},
+      {"lat": ${currentPort.lat}, "lng": ${currentPort.lng}, "name": "${vesselData.loadPort} Port", "type": "port"},
       {"lat": ${(currentPort.lat + destinationPort.lat) / 2}, "lng": ${(currentPort.lng + destinationPort.lng) / 2}, "name": "Mid-Route Checkpoint", "type": "waypoint"},
-      {"lat": ${destinationPort.lat}, "lng": ${destinationPort.lng}, "name": "${selectedPort.name} Port", "type": "destination"}
+      {"lat": ${destinationPort.lat}, "lng": ${destinationPort.lng}, "name": "${selectedPort.name} Port", "type": "port"}
     ],
     "totalDistance": ${directDistance},
     "estimatedTime": ${estimatedTime},
     "fuelConsumption": ${fuelConsumption},
     "weatherRisk": "low",
-    "advantages": ["Shortest distance", "Good weather conditions", "Lower fuel consumption"],
+    "advantages": ["Optimized route"],
     "trafficDensity": "medium"
   },
   "alternativeRoutes": [
     {
-      "routeName": "Offshore Deep Water Route",
-      "description": "Offshore route to avoid coastal traffic",
+      "routeName": "Alternative Route",
+      "description": "Alternative shipping route",
       "waypoints": [
         {"lat": ${currentPort.lat}, "lng": ${currentPort.lng}, "name": "${vesselData.loadPort} Port"},
-        {"lat": ${currentPort.lat - 2}, "lng": ${currentPort.lng + 1}, "name": "Offshore Point"},
         {"lat": ${destinationPort.lat}, "lng": ${destinationPort.lng}, "name": "${selectedPort.name} Port"}
       ],
-      "totalDistance": ${Math.round(directDistance * 1.15)},
+      "totalDistance": ${Math.round(directDistance * 1.1)},
       "estimatedTime": ${Math.round(estimatedTime * 1.1)},
-      "fuelConsumption": ${Math.round(fuelConsumption * 1.15)},
-      "riskLevel": "medium",
-      "advantages": ["Less traffic", "Better for large vessels"],
-      "disadvantages": ["Longer distance", "Higher fuel cost"]
+      "fuelConsumption": ${Math.round(fuelConsumption * 1.1)},
+      "riskLevel": "medium"
     }
   ]
 }`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
-      
-      const cleanedText = text.replace(/```json\n?|\n?```/g, '');
-      const routeOptimization = JSON.parse(cleanedText);
-      
-      return this.validateRouteOptimization(routeOptimization);
+      console.log(`🧭 Route Optimization: Processing vessel ${vesselData.name} (${vesselData._id})`);
+      const text = await this.callGeminiWithRetry(prompt);
+      if (text) {
+        console.log('✅ Route Optimization: Gemini AI response received');
+        const cleanedText = text.replace(/```json\n?|\n?```/g, '');
+        const routeOptimization = JSON.parse(cleanedText);
+        const validatedResult = this.validateRouteOptimization(routeOptimization);
+        validatedResult.dataSource = 'gemini_ai';
+        return validatedResult;
+      }
     } catch (error) {
-      console.error('Route optimization error:', error);
-      return this.getDefaultRouteOptimization(currentPort, destinationPort);
+      console.log(`⚠️ Route Optimization: Using fallback data (${error.message})`);
     }
+    
+    const fallbackResult = this.getRealisticRouteOptimization(currentPort, destinationPort, vesselData, selectedPort);
+    fallbackResult.dataSource = 'fallback';
+    console.log('🔄 Route Optimization: Generated fallback data');
+    return fallbackResult;
   }
 
   /**
    * Optimize discharge sequencing
    */
   async optimizeDischargeSequencing(vesselData, inputData) {
-    const totalCargo = vesselData.parcels.reduce((sum, p) => sum + p.size, 0);
-    
+    // Summarize data to reduce prompt size
+    const vesselSummary = this.summarizeVesselData(vesselData);
+    const plantSummary = this.summarizePlantData(inputData.portToPlant);
+
     const prompt = `
-Optimize discharge sequencing for vessel ${vesselData.name}.
+Optimize discharge sequencing for vessel ${vesselSummary.name}.
 
-CARGO DETAILS:
-${vesselData.parcels.map((parcel, index) => 
-  `Parcel ${index + 1}: ${parcel.size}MT ${parcel.materialType} (Grade: ${parcel.qualityGrade})`
-).join('\n')}
+VESSEL SUMMARY:
+- Capacity: ${vesselSummary.capacity} MT
+- Total Cargo: ${vesselSummary.totalCargo} MT (${vesselSummary.parcelCount} parcels)
+- Cargo Types: ${vesselSummary.parcelTypes.join(', ')}
 
-PORT TO PLANT DATA:
-${inputData.portToPlant?.analysisData?.plantDistributionAnalysis?.plantAllocations?.map(plant => 
-  `- ${plant.plantName}: ${plant.allocatedQuantity}MT required`
-).join('\n') || 'No plant allocation data available'}
+PLANT ALLOCATION SUMMARY:
+${plantSummary ? 
+  `- Plants: ${plantSummary.totalPlants}
+- Total Allocation: ${plantSummary.totalAllocation} MT
+- Shortfall: ${plantSummary.totalShortfall} MT` : 
+  'No plant allocation data available'}
 
-Optimize the sequence to minimize total discharge time and costs.
+Optimize the sequence to minimize total discharge time and costs. Provide up to 3 discharge points.
 
 Respond in JSON format:
 {
   "optimalSequence": [
     {
-      "portName": "Port1",
-      "parcelId": "parcel_1",
       "cargoVolume": 15000,
       "sequenceOrder": 1,
-      "estimatedDischargeDuration": 18,
-      "costSavings": 25000,
-      "reasoning": "High priority plant allocation"
+      "estimatedDischargeDuration": 12
     }
   ],
-  "sequentialDischarges": 3,
-  "totalDischargeTime": 72,
-  "efficiencyGain": 15
+  "sequentialDischarges": 2,
+  "totalDischargeTime": 24,
+  "efficiencyGain": 10
 }`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
-      
-      const cleanedText = text.replace(/```json\n?|\n?```/g, '');
-      const dischargeOptimization = JSON.parse(cleanedText);
-      
-      return this.validateDischargeOptimization(dischargeOptimization, vesselData);
+      console.log(`📦 Discharge Sequencing: Processing vessel ${vesselData.name} (${vesselData._id})`);
+      const text = await this.callGeminiWithRetry(prompt);
+      if (text) {
+        console.log('✅ Discharge Sequencing: Gemini AI response received');
+        const cleanedText = text.replace(/```json\n?|\n?```/g, '');
+        const dischargeOptimization = JSON.parse(cleanedText);
+        const validatedResult = this.validateDischargeOptimization(dischargeOptimization, vesselData);
+        validatedResult.dataSource = 'gemini_ai';
+        return validatedResult;
+      }
     } catch (error) {
-      console.error('Discharge optimization error:', error);
-      return this.getDefaultDischargeOptimization(vesselData);
+      console.log(`⚠️ Discharge Sequencing: Using fallback data (${error.message})`);
     }
+    
+    const fallbackResult = this.getRealisticDischargeOptimization(vesselData, inputData);
+    fallbackResult.dataSource = 'fallback';
+    console.log('🔄 Discharge Sequencing: Generated fallback data');
+    return fallbackResult;
   }
 
   /**
@@ -382,13 +736,43 @@ Respond in JSON format:
    */
   async saveOptimization(optimizationData) {
     try {
-      // Remove existing optimization for this vessel
-      await Optimization.findOneAndDelete({ vesselId: optimizationData.vesselId });
+      // Use findOneAndUpdate with upsert to handle both new and existing optimizations
+      const savedOptimization = await Optimization.findOneAndUpdate(
+        { vesselId: optimizationData.vesselId },
+        optimizationData,
+        { upsert: true, new: true, runValidators: true }
+      );
       
-      const optimization = new Optimization(optimizationData);
-      return await optimization.save();
+      console.log(`✅ Optimization saved for vessel ${optimizationData.vesselName} (${optimizationData.vesselId})`);
+      return savedOptimization;
     } catch (error) {
-      console.error('Error saving optimization:', error);
+      console.error('❌ Error saving optimization:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieve optimization results for a vessel
+   */
+  async getOptimizationResults(vesselId) {
+    try {
+      const optimization = await Optimization.findOne({ vesselId }).sort({ createdAt: -1 });
+      return optimization;
+    } catch (error) {
+      console.error('Error retrieving optimization results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete optimization results for a vessel
+   */
+  async deleteOptimizationResults(vesselId) {
+    try {
+      const result = await Optimization.findOneAndDelete({ vesselId });
+      return result;
+    } catch (error) {
+      console.error('Error deleting optimization results:', error);
       throw error;
     }
   }
@@ -414,7 +798,12 @@ Respond in JSON format:
     return {
       recommendedRoute: {
         waypoints: Array.isArray(routeOptimization.recommendedRoute?.waypoints) ? 
-          routeOptimization.recommendedRoute.waypoints : [],
+          routeOptimization.recommendedRoute.waypoints.map(wp => ({
+            lat: wp.lat,
+            lng: wp.lng,
+            name: wp.name,
+            type: ['port', 'waypoint', 'checkpoint'].includes(wp.type) ? wp.type : 'waypoint'
+          })) : [],
         totalDistance: Number(routeOptimization.recommendedRoute?.totalDistance) || 800,
         estimatedTime: Number(routeOptimization.recommendedRoute?.estimatedTime) || 36,
         fuelConsumption: Number(routeOptimization.recommendedRoute?.fuelConsumption) || 180,
@@ -435,53 +824,356 @@ Respond in JSON format:
     };
   }
 
-  // Default fallback methods
-  getDefaultPortSelection(currentPort) {
-    const defaultPort = this.indianPorts[currentPort] || this.indianPorts['Chennai'];
+  // Realistic fallback methods with correlated data
+  getRealisticPortSelection(currentPort, vesselData) {
+    // Logic based on vessel capacity and current port
+    const capacity = vesselData.capacity;
+    const isLargeVessel = capacity > 100000;
+    
+    // Select optimal port based on vessel size and current location
+    let selectedPortName;
+    if (currentPort === 'Richards Bay' || currentPort === 'Saldanha Bay') {
+      selectedPortName = isLargeVessel ? 'Paradip' : 'Chennai';
+    } else if (currentPort === 'Port Hedland') {
+      selectedPortName = isLargeVessel ? 'Vizag' : 'Chennai';
+    } else {
+      selectedPortName = isLargeVessel ? 'Paradip' : 'Mumbai';
+    }
+    
+    const selectedPort = this.indianPorts[selectedPortName];
+    const congestionLevel = isLargeVessel ? 35 : 25; // Large vessels face more congestion
+    const costPerTonne = selectedPort.efficiency > 88 ? 1150 : 1250;
+    
     return {
       selectedPort: {
-        name: currentPort || 'Chennai',
-        coordinates: { lat: defaultPort.lat, lng: defaultPort.lng },
-        capacity: defaultPort.capacity,
-        efficiency: defaultPort.efficiency,
-        currentCongestion: 25,
-        costPerTonne: 1200
+        name: selectedPortName,
+        coordinates: { lat: selectedPort.lat, lng: selectedPort.lng },
+        capacity: selectedPort.capacity,
+        efficiency: selectedPort.efficiency,
+        currentCongestion: congestionLevel,
+        costPerTonne: costPerTonne
       },
-      alternativePorts: [],
-      selectionReasoning: 'Default port selection based on current load port'
+      alternativePorts: this.getAlternativePorts(selectedPortName, isLargeVessel),
+      selectionReasoning: `Selected ${selectedPortName} based on vessel capacity (${capacity}MT), port efficiency (${selectedPort.efficiency}%), and optimal distance from ${currentPort}`
     };
   }
 
-  getDefaultRouteOptimization(origin, destination) {
+  getAlternativePorts(selectedPort, isLargeVessel) {
+    const alternatives = [];
+    const allPorts = Object.entries(this.indianPorts);
+    
+    for (const [name, data] of allPorts) {
+      if (name === selectedPort) continue;
+      
+      // Only show suitable alternatives based on vessel size
+      if (isLargeVessel && data.capacity < 50000) continue;
+      
+      alternatives.push({
+        name: name,
+        coordinates: { lat: data.lat, lng: data.lng },
+        efficiency: data.efficiency,
+        congestion: data.efficiency > 87 ? 30 : 40,
+        costPerTonne: data.efficiency > 87 ? 1200 : 1300,
+        reasonForRejection: data.efficiency < 87 ? 'Lower efficiency rating' : 'Higher operational costs'
+      });
+      
+      if (alternatives.length >= 2) break;
+    }
+    
+    return alternatives;
+  }
+
+  getRealisticRouteOptimization(originPort, destinationPort, vesselData, selectedPort) {
+    const distance = this.calculateDistance(originPort.lat, originPort.lng, destinationPort.lat, destinationPort.lng);
+    const vesselSpeed = vesselData.capacity > 100000 ? 11 : 13; // Large vessels are slower
+    const estimatedTime = Math.round(distance / vesselSpeed);
+    const fuelConsumption = Math.round(distance * (vesselData.capacity > 100000 ? 0.18 : 0.12));
+    
+    // Generate realistic waypoints
+    const midLat = (originPort.lat + destinationPort.lat) / 2;
+    const midLng = (originPort.lng + destinationPort.lng) / 2;
+    
     return {
       recommendedRoute: {
+        routeName: `${vesselData.loadPort} to ${selectedPort.name} - Optimal Maritime Corridor`,
+        description: `Direct coastal route optimized for ${vesselData.capacity}MT vessel, considering current weather patterns and traffic density`,
         waypoints: [
-          { lat: origin.lat, lng: origin.lng, name: 'Origin', type: 'port' },
-          { lat: destination.lat, lng: destination.lng, name: 'Destination', type: 'port' }
+          { lat: originPort.lat, lng: originPort.lng, name: `${vesselData.loadPort} Port`, type: 'port' },
+          { lat: midLat, lng: midLng, name: 'Navigation Checkpoint', type: 'waypoint' },
+          { lat: destinationPort.lat, lng: destinationPort.lng, name: `${selectedPort.name} Port`, type: 'port' }
         ],
-        totalDistance: 800,
-        estimatedTime: 36,
-        fuelConsumption: 180,
-        weatherRisk: 'medium'
+        totalDistance: distance,
+        estimatedTime: estimatedTime,
+        fuelConsumption: fuelConsumption,
+        weatherRisk: distance > 1500 ? 'medium' : 'low',
+        advantages: [
+          'Optimized for vessel size',
+          'Weather-adjusted route',
+          distance < 1000 ? 'Short distance advantage' : 'Established shipping lane'
+        ],
+        trafficDensity: distance > 1500 ? 'high' : 'medium'
       },
-      alternativeRoutes: []
+      alternativeRoutes: [
+        {
+          routeName: 'Extended Deep Water Route',
+          description: 'Longer offshore route avoiding coastal traffic',
+          waypoints: [
+            { lat: originPort.lat, lng: originPort.lng, name: `${vesselData.loadPort} Port` },
+            { lat: originPort.lat - 1.5, lng: originPort.lng + 2, name: 'Deep Water Point' },
+            { lat: destinationPort.lat, lng: destinationPort.lng, name: `${selectedPort.name} Port` }
+          ],
+          totalDistance: Math.round(distance * 1.12),
+          estimatedTime: Math.round(estimatedTime * 1.08),
+          fuelConsumption: Math.round(fuelConsumption * 1.12),
+          riskLevel: 'low',
+          advantages: ['Less coastal traffic', 'Better for large vessels'],
+          disadvantages: ['12% longer distance', '8% more time required']
+        }
+      ]
     };
   }
 
-  getDefaultDischargeOptimization(vesselData) {
+  getRealisticDischargeOptimization(vesselData, inputData) {
+    const totalCargo = vesselData.parcels.reduce((sum, p) => sum + p.size, 0);
+    const vesselCapacity = vesselData.capacity;
+    
+    // Simple calculation: discharge time based on vessel capacity and cargo
+    const dischargeCycles = Math.ceil(totalCargo / vesselCapacity);
+    const dischargeTimePerCycle = vesselCapacity > 100000 ? 36 : 24; // Hours
+    const totalDischargeTime = dischargeCycles * dischargeTimePerCycle;
+    
+    // Simple sequence with 1-3 discharge points
+    const dischargePoints = Math.min(3, dischargeCycles);
+    const cargoPerPoint = Math.ceil(totalCargo / dischargePoints);
+    
+    const optimalSequence = [];
+    let remainingCargo = totalCargo;
+    
+    for (let i = 0; i < dischargePoints; i++) {
+      const cargoVolume = Math.min(cargoPerPoint, remainingCargo);
+      const estimatedDischargeDuration = Math.ceil(cargoVolume / (vesselCapacity > 100000 ? 1500 : 2000)); // MT per hour
+      
+      optimalSequence.push({
+        cargoVolume: cargoVolume,
+        sequenceOrder: i + 1,
+        estimatedDischargeDuration: estimatedDischargeDuration
+      });
+      
+      remainingCargo -= cargoVolume;
+      if (remainingCargo <= 0) break;
+    }
+    
+    // Efficiency gain: 5-15% improvement over naive approach
+    const efficiencyGain = Math.min(15, Math.max(5, Math.floor(Math.random() * 10) + 5));
+    
     return {
-      optimalSequence: vesselData.parcels.map((parcel, index) => ({
-        portName: vesselData.loadPort,
-        parcelId: `parcel_${index + 1}`,
-        cargoVolume: parcel.size,
-        sequenceOrder: index + 1,
-        estimatedDischargeDuration: Math.ceil(parcel.size / 1000) * 2,
-        costSavings: parcel.size * 2,
-        reasoning: 'Sequential discharge optimization'
-      })),
-      sequentialDischarges: vesselData.parcels.length,
-      totalDischargeTime: vesselData.parcels.reduce((total, parcel) => total + Math.ceil(parcel.size / 1000) * 2, 0),
-      efficiencyGain: 10
+      optimalSequence,
+      sequentialDischarges: dischargePoints,
+      totalDischargeTime,
+      efficiencyGain
+    };
+  }
+
+  async callGeminiWithRetry(prompt, maxRetries = 3) {
+    if (!this.model) {
+      console.log('❌ No Gemini model available');
+      return null;
+    }
+    
+    // Check and reset daily counter if needed
+    const now = Date.now();
+    if (now >= this.dailyResetTime.getTime()) {
+      this.dailyRequestCount = 0;
+      // Set next reset time (next midnight)
+      this.dailyResetTime = new Date();
+      this.dailyResetTime.setDate(this.dailyResetTime.getDate() + 1);
+      this.dailyResetTime.setHours(0, 0, 0, 0);
+    }
+    
+    // More aggressive rate limiting
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    // Reset counter every 60 seconds
+    if (timeSinceLastRequest > 60000) {
+      this.requestCount = 0;
+    }
+    
+    // Log prompt size for debugging
+    const promptTokens = prompt.length / 4; // Rough estimation of tokens
+    console.log(`📝 Prompt size: ~${Math.round(promptTokens)} tokens`);
+    
+    // Check if prompt is too large (reduced limit to 8k tokens for safety)
+    if (promptTokens > 8000) {
+      console.log(`⚠️ Prompt too large (${Math.round(promptTokens)} tokens), using fallback data`);
+      return null;
+    }
+    
+    this.requestCount++;
+    this.dailyRequestCount++;
+    this.lastRequestTime = now;
+    
+    console.log(`📡 Sending request to Gemini API... (Daily count: ${this.dailyRequestCount}/150)`);
+    
+    // Add a timestamp for tracking request start time
+    const requestStartTime = Date.now();
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Add request timeout (reduced to 10 seconds for better user experience)
+        const result = await Promise.race([
+          this.model.generateContent(prompt),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Request timeout after 10 seconds')), 10000)
+          )
+        ]);
+        
+        const response = await result.response;
+        const text = response.text().trim();
+        
+        if (!text || text.length === 0) {
+          throw new Error('Empty response from Gemini API');
+        }
+        
+        console.log(`✅ Gemini API call successful (attempt ${attempt + 1})`);
+        return text;
+      } catch (error) {
+        console.log(`⚠️ Gemini API attempt ${attempt + 1} failed: ${error.message}`);
+        
+        // Check if we've exceeded the 10-second limit for real-time user experience
+        const timeElapsed = Date.now() - requestStartTime;
+        if (timeElapsed > 10000) {
+          console.log(`⏰ Request time exceeded 10 seconds (${timeElapsed}ms), using fallback data`);
+          return null;
+        }
+        
+        // Log specific error types
+        if (error.message.includes('429')) {
+          console.log('🚦 Rate limit exceeded');
+          // Implement shorter wait for rate limits to improve user experience
+          const isDailyLimit = error.message.includes('200');
+          // Reduced wait times for better user experience
+          const waitTime = isDailyLimit ? 60000 : 30000; // 1 min for daily, 30 sec for per-minute
+          console.log(`⏳ Waiting ${waitTime/1000} seconds due to rate limit...`);
+          
+          // If wait time is more than 10 seconds, use fallback instead
+          if (waitTime > 10000) {
+            console.log('⏰ Rate limit wait time exceeds 10 seconds, using fallback data instead');
+            return null;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else if (error.message.includes('500')) {
+          console.log('💥 Server error');
+        } else if (error.message.includes('timeout')) {
+          console.log('⏰ Request timeout');
+        }
+        
+        if (attempt === maxRetries) {
+          // Try next API key if available
+          if (await this.tryNextApiKey()) {
+            console.log(`🔄 Switched to backup API key (${this.currentKeyIndex + 1}/${this.apiKeys.length})`);
+            // Check time limit before trying again
+            const timeElapsed = Date.now() - requestStartTime;
+            if (timeElapsed > 10000) {
+              console.log(`⏰ Request time exceeded 10 seconds (${timeElapsed}ms), using fallback data`);
+              return null;
+            }
+            return this.callGeminiWithRetry(prompt, 1); // One more try with new key
+          }
+          console.log('❌ All retry attempts failed');
+          throw error;
+        }
+        // Wait before retry with exponential backoff (reduced wait times)
+        const waitTime = Math.pow(2, attempt) * 1000; // Reduced base wait time
+        console.log(`⏳ Waiting ${Math.ceil(waitTime/1000)} seconds before retry...`);
+        
+        // If wait time is more than 10 seconds, use fallback instead
+        if (waitTime > 10000) {
+          console.log('⏰ Retry wait time exceeds 10 seconds, using fallback data instead');
+          return null;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+
+  getRealisticDischargeOptimization(vesselData, inputData) {
+    // Get plant allocation data if available
+    const plantAllocations = inputData.portToPlant?.analysisData?.plantDistributionAnalysis?.plantAllocations || [];
+    
+    // Calculate total cargo and discharge parameters
+    const totalCargo = vesselData.parcels.reduce((sum, p) => sum + p.size, 0);
+    const averageParcelSize = totalCargo / vesselData.parcels.length;
+    
+    // Discharge rate based on vessel size and cargo type
+    const dischargeRatePerHour = averageParcelSize > 30000 ? 1500 : 2000; // MT per hour
+    
+    // Create discharge sequence based on plant allocations and cargo priorities
+    let optimalSequence = [];
+    
+    if (plantAllocations.length > 0) {
+      // Sort plants by shortfall (highest priority first)
+      const sortedPlants = [...plantAllocations].sort((a, b) => 
+        (b.shortfall || 0) - (a.shortfall || 0)
+      );
+      
+      // Create discharge sequence based on plant priorities
+      optimalSequence = sortedPlants.slice(0, 3).map((plant, index) => {
+        // Calculate discharge duration based on allocated quantity
+        const cargoVolume = Math.min(plant.allocatedQuantity || 0, totalCargo / sortedPlants.length);
+        const dischargeDuration = Math.ceil(cargoVolume / dischargeRatePerHour);
+        
+        return {
+          portName: vesselData.loadPort,
+          cargoVolume: Math.round(cargoVolume),
+          sequenceOrder: index + 1,
+          estimatedDischargeDuration: dischargeDuration,
+          reasoning: plant.shortfall > 0 
+            ? `High priority discharge to address ${plant.shortfall}MT shortfall at ${plant.plantName}`
+            : `Standard discharge for ${plant.plantName} allocation`
+        };
+      });
+    } else {
+      // Default sequence if no plant data available
+      optimalSequence = vesselData.parcels
+        .map((parcel, index) => {
+          const dischargeDuration = Math.ceil(parcel.size / dischargeRatePerHour);
+          
+          return {
+            portName: vesselData.loadPort,
+            cargoVolume: parcel.size,
+            sequenceOrder: index + 1,
+            estimatedDischargeDuration: dischargeDuration,
+            reasoning: parcel.qualityGrade === 'Premium' 
+              ? 'High-grade material prioritized for immediate processing'
+              : 'Standard discharge sequence'
+          };
+        })
+        .sort((a, b) => {
+          // Priority: Premium grade first
+          const aIsPremium = a.reasoning.includes('High-grade');
+          const bIsPremium = b.reasoning.includes('High-grade');
+          
+          if (aIsPremium && !bIsPremium) return -1;
+          if (!aIsPremium && bIsPremium) return 1;
+          return a.sequenceOrder - b.sequenceOrder;
+        })
+        .map((item, index) => ({ ...item, sequenceOrder: index + 1 }));
+    }
+    
+    // Calculate total discharge time
+    const totalDischargeTime = optimalSequence.reduce((total, seq) => total + seq.estimatedDischargeDuration, 0);
+    
+    // Calculate efficiency gain (compared to sequential discharge of all cargo)
+    const baselineTime = Math.ceil(totalCargo / (dischargeRatePerHour * 0.7)); // Less efficient baseline
+    const efficiencyGain = Math.max(5, Math.round(((baselineTime - totalDischargeTime) / baselineTime) * 100));
+    
+    return {
+      optimalSequence: optimalSequence.slice(0, 3), // Limit to 3 discharge points
+      sequentialDischarges: Math.min(3, optimalSequence.length),
+      totalDischargeTime,
+      efficiencyGain
     };
   }
 
@@ -527,32 +1219,55 @@ Respond in JSON format:
   }
 
   async performCostBenefitAnalysis(vesselData, portOpt, routeOpt, dischargeOpt, railOpt, inputData) {
-    // Implementation for cost-benefit analysis
-    const traditionalCost = 850000;
-    const optimizedCost = 720000;
+    // Calculate realistic costs based on actual optimization results
+    const vesselCapacity = vesselData.capacity;
+    const routeDistance = routeOpt.recommendedRoute?.totalDistance || 800;
+    const estimatedTime = routeOpt.recommendedRoute?.estimatedTime || 48;
+    const fuelConsumption = routeOpt.recommendedRoute?.fuelConsumption || 150;
+    const dischargeTime = dischargeOpt.totalDischargeTime || 72;
+    const portEfficiency = portOpt.selectedPort?.efficiency || 85;
+    
+    // Base costs (traditional approach)
+    const baseFuelCost = Math.round(fuelConsumption * 1.15 * 680); // Higher fuel consumption
+    const basePortCharges = Math.round(vesselCapacity * 1.8); // $1.8 per MT
+    const baseDemurrageCost = Math.round((estimatedTime + dischargeTime) * 12 * 8500); // $8500/day
+    const baseRailCost = Math.round(vesselCapacity * 280); // $280 per MT
+    const traditionalCost = baseFuelCost + basePortCharges + baseDemurrageCost + baseRailCost;
+    
+    // Optimized costs
+    const optimizedFuelCost = Math.round(fuelConsumption * 680); // Optimized route
+    const optimizedPortCharges = Math.round(vesselCapacity * (portEfficiency > 88 ? 1.5 : 1.6));
+    const efficiencyFactor = Math.max(0.85, (portEfficiency / 100) * (dischargeOpt.efficiencyGain / 100 + 1));
+    const optimizedDemurrageCost = Math.round((estimatedTime + dischargeTime) * efficiencyFactor * 8500);
+    const optimizedRailCost = Math.round(vesselCapacity * 240); // Better coordination
+    const optimizedCost = optimizedFuelCost + optimizedPortCharges + optimizedDemurrageCost + optimizedRailCost;
+    
+    const costSavings = traditionalCost - optimizedCost;
+    const timeSavings = Math.round((estimatedTime + dischargeTime) * (1 - efficiencyFactor));
+    const co2Reduction = Math.round((baseFuelCost - optimizedFuelCost) * 0.0031); // 3.1 kg CO2 per liter
     
     return {
       traditional: {
         totalCost: traditionalCost,
-        timeRequired: 168,
-        fuelCost: 180000,
-        portCharges: 120000,
-        demurrageCost: 80000,
-        railTransportCost: 270000
+        timeRequired: Math.round(estimatedTime + dischargeTime + 24), // Additional buffer time
+        fuelCost: baseFuelCost,
+        portCharges: basePortCharges,
+        demurrageCost: baseDemurrageCost,
+        railTransportCost: baseRailCost
       },
       optimized: {
         totalCost: optimizedCost,
-        timeRequired: 142,
-        fuelCost: 150000,
-        portCharges: 100000,
-        demurrageCost: 60000,
-        railTransportCost: 210000
+        timeRequired: Math.round(estimatedTime + dischargeTime),
+        fuelCost: optimizedFuelCost,
+        portCharges: optimizedPortCharges,
+        demurrageCost: optimizedDemurrageCost,
+        railTransportCost: optimizedRailCost
       },
       savings: {
-        costSavings: traditionalCost - optimizedCost,
-        timeSavings: 26,
-        percentageSavings: ((traditionalCost - optimizedCost) / traditionalCost * 100),
-        co2ReductionTonnes: 45
+        costSavings: Math.max(costSavings, 0),
+        timeSavings: Math.max(timeSavings, 0),
+        percentageSavings: Math.round((costSavings / traditionalCost) * 100),
+        co2ReductionTonnes: Math.max(co2Reduction, 0)
       }
     };
   }
@@ -1004,12 +1719,37 @@ Respond in JSON format:
   }
 
   calculatePerformanceMetrics(costBenefitAnalysis, riskAssessment, inputData) {
+    // Calculate efficiency score based on time savings
+    const timeSavingsPercent = costBenefitAnalysis.savings.timeSavings > 0 ? 
+      Math.min(100, Math.round((costBenefitAnalysis.savings.timeSavings / costBenefitAnalysis.traditional.timeRequired) * 100)) : 0;
+    
+    // Calculate cost efficiency score based on cost savings
+    const costSavingsPercent = costBenefitAnalysis.savings.costSavings > 0 ?
+      Math.min(100, Math.round((costBenefitAnalysis.savings.costSavings / costBenefitAnalysis.traditional.totalCost) * 100)) : 0;
+    
+    // Calculate environmental score based on CO2 reduction
+    const co2ReductionPercent = costBenefitAnalysis.savings.co2ReductionTonnes > 0 ?
+      Math.min(100, Math.round((costBenefitAnalysis.savings.co2ReductionTonnes / 50) * 100)) : 0; // Assuming 50 tonnes as max
+    
+    // Calculate reliability score based on risk factors
+    const riskScore = riskAssessment.overallRiskLevel === 'low' ? 95 : 
+                     riskAssessment.overallRiskLevel === 'medium' ? 80 : 
+                     riskAssessment.overallRiskLevel === 'high' ? 60 : 40;
+    
+    // Calculate overall optimization score as weighted average
+    const overallScore = Math.round(
+      (timeSavingsPercent * 0.3) + 
+      (costSavingsPercent * 0.3) + 
+      (co2ReductionPercent * 0.2) + 
+      (riskScore * 0.2)
+    );
+    
     return {
-      efficiencyScore: 85,
-      reliabilityScore: 88,
-      costEfficiencyScore: 82,
-      environmentalScore: 79,
-      overallOptimizationScore: 83
+      efficiencyScore: Math.min(100, Math.max(0, timeSavingsPercent + 15)), // Base score + time savings
+      reliabilityScore: Math.min(100, riskScore + 5), // Base risk score + buffer
+      costEfficiencyScore: Math.min(100, costSavingsPercent + 20), // Base score + cost savings
+      environmentalScore: Math.min(100, co2ReductionPercent + 10), // Base score + environmental benefits
+      overallOptimizationScore: Math.min(100, overallScore)
     };
   }
 

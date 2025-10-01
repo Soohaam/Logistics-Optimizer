@@ -5,8 +5,9 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
-import { AlertCircle, CheckCircle, Ship, RefreshCw } from "lucide-react"
+import { AlertCircle, CheckCircle, Ship, RefreshCw, Play } from "lucide-react"
 import OptimizationResults from "./OptimizationResults"
+
 
 interface OptimizationProps {
   vesselId?: string
@@ -16,6 +17,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
   const [optimizationData, setOptimizationData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [initialCheckDone, setInitialCheckDone] = useState(false)
 
   const fetchOptimizationData = async () => {
     if (!vesselId) return
@@ -45,9 +47,11 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setLoading(false)
+      setInitialCheckDone(true)
     }
   }
 
+  // Check for existing optimization on component mount
   useEffect(() => {
     fetchOptimizationData()
   }, [vesselId])
@@ -68,6 +72,26 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
       }
     } catch (err) {
       console.error("Error regenerating optimization:", err)
+    }
+  }
+
+  // Run optimization if no existing data
+  const runOptimization = async () => {
+    if (!vesselId) return
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/optimization/vessel/${vesselId}/regenerate`, {
+        method: "POST",
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setOptimizationData(data.data)
+        fetchOptimizationData() // Start polling
+      }
+    } catch (err) {
+      console.error("Error running optimization:", err)
     }
   }
 
@@ -113,19 +137,42 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     )
   }
 
-  if (!optimizationData) {
+  // Show run optimization button if no data and initial check is done
+  if (!optimizationData && initialCheckDone) {
+    return (
+      <Card className="w-full shadow-lg border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">
+        <CardContent className="flex flex-col items-center justify-center h-[400px] space-y-6">
+          <div className="bg-blue-100 rounded-full p-6 w-fit">
+            <Ship className="h-16 w-16 text-blue-600" />
+          </div>
+          <div className="text-center space-y-3">
+            <h3 className="text-2xl font-bold text-slate-800">No Optimization Data Found</h3>
+            <p className="text-slate-600 max-w-md">
+              Run an optimization analysis to get recommendations for port selection, routing, and cost savings.
+            </p>
+          </div>
+          <Button
+            onClick={runOptimization}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            <Play className="w-5 h-5 mr-2" />
+            Run Optimization
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show loading state while checking for existing data
+  if (!optimizationData && !initialCheckDone) {
     return (
       <Card className="w-full shadow-lg border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">
         <CardContent className="flex items-center justify-center h-[400px]">
-          <div className="text-center space-y-6">
-            <div className="bg-slate-100 rounded-full p-6 w-fit mx-auto">
-              <Ship className="h-16 w-16 text-slate-400" />
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-xl font-semibold text-slate-700">No Vessel Selected</h3>
-              <p className="text-slate-500 max-w-sm">
-                Please select a vessel from the list to view its optimization analysis and performance metrics
-              </p>
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-slate-200 border-t-blue-600 mx-auto"></div>
+            <div className="space-y-2">
+              <p className="text-slate-700 font-medium text-lg">Checking for existing optimization...</p>
+              <p className="text-slate-500 text-sm">Please wait</p>
             </div>
           </div>
         </CardContent>
@@ -213,7 +260,8 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
               </div>
               <div className="space-y-2">
                 <p className="text-amber-800 font-semibold text-lg">Optimization in progress...</p>
-                <p className="text-amber-600 text-sm">This process typically takes 2-5 minutes to complete</p>
+                <p className="text-amber-600 text-sm">This process typically takes 10-30 seconds to complete</p>
+                <p className="text-amber-500 text-xs mt-2">Using AI optimization with fallback mechanisms for faster results</p>
               </div>
             </div>
           </CardContent>
