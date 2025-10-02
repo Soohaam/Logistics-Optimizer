@@ -2,13 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown, Play, Star, Users, Globe, Zap } from "lucide-react";
+import { ChevronDown, Play, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// Import the modified Globe component
+import { useRouter } from "next/navigation";
 import { GlobeDemo } from "@/components/GlobeDemo";
 
-// Simple wrapper to ensure proper sizing
+// Simple wrapper for globe
 const GlobeWrapper: React.FC = () => {
   return (
     <div className="w-full h-full relative">
@@ -18,16 +17,10 @@ const GlobeWrapper: React.FC = () => {
 };
 
 const Hero: React.FC = () => {
-  const features = [
-    { icon: Globe, text: "Global Coverage" },
-    { icon: Zap, text: "Real-time Analytics" },
-    { icon: Users, text: "Team Collaboration" },
-  ];
-
-  // --- Fix hydration issue: pre-generate random particles client-side ---
   const [particles, setParticles] = useState<
     { left: string; top: string; duration: number; delay: number; color: string }[]
   >([]);
+  const router = useRouter();
 
   useEffect(() => {
     const generated = Array.from({ length: 8 }).map((_, i) => ({
@@ -35,57 +28,50 @@ const Hero: React.FC = () => {
       top: `${Math.random() * 100}%`,
       duration: 4 + Math.random() * 4,
       delay: Math.random() * 2,
-      color: i % 3 === 0 ? "bg-neon-pink" : i % 3 === 1 ? "bg-neon-blue" : "bg-neon-purple",
+      color:
+        i % 3 === 0
+          ? "bg-neon-pink"
+          : i % 3 === 1
+          ? "bg-neon-blue"
+          : "bg-neon-purple",
     }));
     setParticles(generated);
   }, []);
 
+  const handleNavigate = () => {
+    router.push("/vessel-manager");
+  };
+
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden pt-20 bg-gray-900">
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-8">
-        {/* Left Content - Enhanced for SAIL */}
-        <div className="relative z-10 flex-1 lg:pr-12">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neon-blue/20 border border-neon-blue/30 mb-6">
-              <Star className="w-4 h-4 text-neon-blue fill-neon-blue" />
-              <span className="text-sm font-medium text-white">
-                Powering SAIL's Steel Supply Chain
-              </span>
-            </div>
+    <section className="relative min-h-screen flex items-center overflow-hidden pt-24 bg-gray-900">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-12">
+        {/* Left Content */}
+        <div className="relative z-10 flex-1 text-center lg:text-left">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neon-blue/20 border border-neon-blue/30 mb-6">
+            <Star className="w-4 h-4 text-neon-blue fill-neon-blue" />
+            <span className="text-sm font-medium text-white">
+              Powering SAIL's Steel Supply Chain
+            </span>
+          </div>
 
-            {/* Main Heading */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white tracking-tight leading-tight mb-6 drop-shadow-md">
-              Steel India's Future
-              <span className="block text-3xl sm:text-4xl lg:text-5xl xl:text-6xl mt-2 text-white">
-                with Smart Logistics
-              </span>
-            </h1>
-          </motion.div>
+          {/* Heading */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-tight mb-6 drop-shadow-md">
+            Steel India's Future
+            <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mt-2 text-white">
+              with Smart Logistics
+            </span>
+          </h1>
 
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-          >
-            <p className="text-lg sm:text-xl text-gray-200 mb-8 max-w-2xl leading-relaxed drop-shadow-sm">
-              Revolutionize SAIL's raw material logistics with AI-driven vessel scheduling,
-              port-to-plant optimization, and cost-efficient dispatch across India's largest steel
-              manufacturing network.
-            </p>
-          </motion.div>
+          {/* Paragraph */}
+          <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-8 max-w-2xl leading-relaxed mx-auto lg:mx-0">
+            Revolutionize SAIL's raw material logistics with AI-driven vessel
+            scheduling, port-to-plant optimization, and cost-efficient dispatch
+            across India's largest steel manufacturing network.
+          </p>
 
-          {/* SAIL-Specific Features */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-            className="flex flex-wrap gap-6 mb-8"
-          >
+          {/* Features */}
+          <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8">
             {[
               { icon: "🚢", text: "Vessel Schedule Optimization" },
               { icon: "🏭", text: "5 Integrated Steel Plants" },
@@ -96,88 +82,96 @@ const Hero: React.FC = () => {
                 <div className="w-10 h-10 rounded-lg bg-neon-blue/20 border border-neon-blue/30 flex items-center justify-center">
                   <span className="text-lg">{feature.icon}</span>
                 </div>
-                <span className="text-sm font-medium text-white">{feature.text}</span>
+                <span className="text-sm font-medium text-white">
+                  {feature.text}
+                </span>
               </div>
             ))}
-          </motion.div>
+          </div>
 
-          {/* Action Buttons */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-            className="flex flex-col sm:flex-row gap-4"
-          >
+          {/* Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
             <Button
               size="lg"
-              className="bg-neon-blue hover:bg-neon-blue/80 text-white font-semibold px-8 py-4 rounded-xl text-lg shadow-lg shadow-neon-blue/25 transition-all duration-300 hover:shadow-xl hover:shadow-neon-blue/40 hover:scale-105"
+              className="bg-neon-blue hover:bg-neon-blue/80 text-white font-semibold px-6 py-3 rounded-xl text-base sm:text-lg"
             >
               Optimize SAIL Operations
             </Button>
             <Button
               variant="outline"
               size="lg"
-              className="border-neon-purple/30 text-black font-semibold px-8 py-4 rounded-xl text-lg"
+              className="border-neon-purple/30 text-black font-semibold px-6 py-3 rounded-xl text-base sm:text-lg"
+              onClick={handleNavigate}
             >
               <Play className="w-5 h-5 mr-2" />
-              View Steel Analytics
+              Create a Vessel
             </Button>
-          </motion.div>
+          </div>
 
-          {/* SAIL-Specific Stats */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
-            className="flex gap-8 mt-12 pt-8 border-t border-gray-700"
-          >
-            <div>
-              <div className="text-2xl font-bold text-neon-blue">25%</div>
-              <div className="text-sm text-gray-400">Cost Reduction</div>
+          {/* Stats */}
+          <div className="flex flex-wrap justify-center lg:justify-start gap-6 mt-10 pt-6 border-t border-gray-700">
+            <div className="text-center">
+              <div className="text-xl sm:text-2xl font-bold text-neon-blue">
+                25%
+              </div>
+              <div className="text-xs sm:text-sm text-gray-400">
+                Cost Reduction
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-neon-pink">5 Plants</div>
-              <div className="text-sm text-gray-400">Steel Facilities</div>
+            <div className="text-center">
+              <div className="text-xl sm:text-2xl font-bold text-neon-pink">
+                5 Plants
+              </div>
+              <div className="text-xs sm:text-sm text-gray-400">
+                Steel Facilities
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-neon-purple">3 Ports</div>
-              <div className="text-sm text-gray-400">East Coast Hubs</div>
+            <div className="text-center">
+              <div className="text-xl sm:text-2xl font-bold text-neon-purple">
+                3 Ports
+              </div>
+              <div className="text-xs sm:text-sm text-gray-400">
+                East Coast Hubs
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-neon-blue">15MT+</div>
-              <div className="text-sm text-gray-400">Annual Capacity</div>
+            <div className="text-center">
+              <div className="text-xl sm:text-2xl font-bold text-neon-blue">
+                15MT+
+              </div>
+              <div className="text-xs sm:text-sm text-gray-400">
+                Annual Capacity
+              </div>
             </div>
-          </motion.div>
+          </div>
 
-          {/* SAIL Plants & Ports Info */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-            className="mt-8 p-4 rounded-xl bg-gradient-to-r from-neon-blue/10 to-neon-pink/10 border border-neon-blue/20"
-          >
-            <div className="grid grid-cols-2 gap-4 text-xs text-gray-300">
+          {/* Plants & Ports Info */}
+          <div className="mt-8 p-4 rounded-xl bg-gradient-to-r from-neon-blue/10 to-neon-pink/10 border border-neon-blue/20 text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-gray-300">
               <div>
-                <div className="text-neon-blue font-semibold mb-1">Steel Plants:</div>
+                <div className="text-neon-blue font-semibold mb-1">
+                  Steel Plants:
+                </div>
                 <div>Bhilai • Durgapur • Rourkela • Bokaro • IISCO</div>
               </div>
               <div>
-                <div className="text-neon-pink font-semibold mb-1">Import Ports:</div>
+                <div className="text-neon-pink font-semibold mb-1">
+                  Import Ports:
+                </div>
                 <div>Haldia • Paradip • Visakhapatnam</div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        {/* Right Content - Globe */}
-        <div className="relative flex-1 flex justify-start items-start lg:justify-end lg:items-end">
+        {/* Right Content - Globe (hidden on mobile, shown only lg+) */}
+        <div className="hidden lg:flex relative flex-1 justify-center lg:justify-end items-center lg:items-end">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
             className="relative"
           >
-            <div className="w-80 h-80 sm:w-96 sm:h-96 lg:w-[500px] lg:h-[500px] relative -translate-y-24 -translate-x-32 lg:-translate-x-0">
+            <div className="w-80 h-80 sm:w-96 sm:h-96 lg:w-[500px] lg:h-[500px] relative -translate-y-36 -translate-x-32 lg:-translate-x-0">
               {/* Background glow effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-neon-pink/20 to-neon-blue/20 rounded-full blur-3xl scale-110"></div>
 
@@ -203,7 +197,7 @@ const Hero: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating Particles Background (hydration-safe) */}
+      {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {particles.map((p, i) => (
           <motion.div
@@ -232,7 +226,7 @@ const Hero: React.FC = () => {
         <ChevronDown className="w-8 h-8 text-neon-blue opacity-70" />
       </motion.div>
 
-      {/* Background gradient overlay */}
+      {/* Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/50 to-transparent pointer-events-none"></div>
     </section>
   );

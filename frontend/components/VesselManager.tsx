@@ -128,7 +128,7 @@ const VesselManager: React.FC = () => {
   // CSV Upload Modal Component
   const CSVUploadModal = () => (
     <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-      <DialogContent className="sm:max-w-[650px] rounded-xl border-0 shadow-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-[650px] rounded-xl border-0 shadow-2xl">
         <DialogHeader className="space-y-4 pb-6">
           <DialogTitle className="text-3xl font-bold text-blue-900">Import Vessels</DialogTitle>
           <DialogDescription className="text-lg text-slate-600">
@@ -139,7 +139,7 @@ const VesselManager: React.FC = () => {
         <div className="space-y-8 py-6">
           <div className="flex flex-col space-y-6">
             <Label className="text-lg font-semibold text-slate-700">Select File</Label>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Input
                 type="file"
                 accept=".csv,.xlsx,.xls"
@@ -149,7 +149,7 @@ const VesselManager: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={downloadTemplate}
-                className="whitespace-nowrap px-6 py-4 text-lg h-14 rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors bg-transparent"
+                className="w-full sm:w-auto whitespace-nowrap px-6 py-4 text-lg h-14 rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors bg-transparent"
               >
                 <FileSpreadsheet className="h-5 w-5 mr-2" />
                 Template
@@ -182,7 +182,7 @@ const VesselManager: React.FC = () => {
 
           {uploadResult && !uploadLoading && (
             <div className="space-y-6 p-6 bg-slate-50 rounded-xl">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-6 w-6 text-green-600" />
                   <span className="text-lg font-semibold text-green-700">
@@ -224,14 +224,14 @@ const VesselManager: React.FC = () => {
               setMessage(null)
               setUploadResult(null)
             }}
-            className="px-8 py-3 text-lg rounded-xl"
+            className="w-full sm:w-auto px-8 py-3 text-lg rounded-xl"
           >
             Close
           </Button>
           <Button
             onClick={handleUpload}
             disabled={!selectedFile || uploadLoading}
-            className="bg-blue-900 hover:bg-blue-800 px-8 py-3 text-lg rounded-xl shadow-lg transition-colors"
+            className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 px-8 py-3 text-lg rounded-xl shadow-lg transition-colors"
           >
             {uploadLoading ? "Uploading..." : "Upload"}
           </Button>
@@ -880,27 +880,29 @@ const VesselManager: React.FC = () => {
 
   const renderVesselsList = () => (
     <div className="w-full space-y-10">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h2 className="text-5xl font-bold text-blue-900">Fleet Management</h2>
-          <p className="text-slate-600 mt-3 text-xl">Manage your vessel fleet and cargo operations with precision</p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-blue-900">Fleet Management</h2>
+          <p className="text-base sm:text-lg md:text-xl text-slate-600 mt-3">
+            Manage your vessel fleet and cargo operations with precision
+          </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <Button
             onClick={() => setShowUploadModal(true)}
             variant="outline"
-            className="shadow-lg px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
-            size="lg"
+            className="w-full sm:w-auto shadow-2xl px-10 py-6 text-2xl font-semibold rounded-2xl border-4 border-blue-400 hover:border-blue-500 hover:bg-blue-100 hover:text-slate-900 dark:hover:text-slate-100 transform hover:scale-105 transition-all duration-300"
+            size="xl"
           >
-            <FileSpreadsheet className="h-6 w-6 mr-3" />
+            <FileSpreadsheet className="h-8 w-8 mr-4" />
             Import CSV
           </Button>
           <Button
             onClick={() => setShowForm(true)}
-            className="bg-blue-900 hover:bg-blue-800 shadow-xl text-white px-8 py-4 text-lg cursor-pointer rounded-xl transition-colors"
-            size="lg"
+            className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 shadow-2xl text-white px-10 py-6 text-2xl font-semibold rounded-2xl transform hover:scale-105 transition-all duration-300"
+            size="xl"
           >
-            <Plus className="h-6 w-6 mr-3" />
+            <Plus className="h-8 w-8 mr-4" />
             Add New Vessel
           </Button>
         </div>
@@ -939,25 +941,25 @@ const VesselManager: React.FC = () => {
               className="shadow-xl hover:shadow-2xl transition-shadow border-0 rounded-2xl bg-white group w-full"
             >
               <CardHeader className="pb-6">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                   <div
                     className="cursor-pointer flex-grow hover:opacity-80 transition-opacity"
                     onClick={() => vessel._id && handleVesselClick(vessel._id)}
                   >
-                    <CardTitle className="text-3xl flex items-center gap-4 font-bold text-slate-800">
-                      <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                        <Ship className="h-6 w-6 text-white" />
+                    <CardTitle className="text-2xl sm:text-3xl flex items-center gap-4 font-bold text-slate-800">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                        <Ship className="h-5 w-5 md:h-6 md:w-6 text-white" />
                       </div>
                       {vessel.name}
                     </CardTitle>
-                    <CardDescription className="text-xl mt-3 text-slate-600 font-medium">
+                    <CardDescription className="text-lg md:text-xl mt-3 text-slate-600 font-medium">
                       Capacity: {vessel.capacity.toLocaleString()} MT
                     </CardDescription>
                   </div>
-                  <div className="flex space-x-4 items-center">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
                     <Button
                       onClick={() => vessel._id && handleVesselClick(vessel._id)}
-                      className="bg-blue-900 hover:bg-blue-800 shadow-lg text-white px-8 py-4 text-lg cursor-pointer rounded-xl transition-colors"
+                      className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 shadow-lg text-white px-8 py-4 text-lg cursor-pointer rounded-xl transition-colors"
                       size="lg"
                     >
                       <Ship className="h-6 w-6 mr-3" />
@@ -966,7 +968,7 @@ const VesselManager: React.FC = () => {
                     <Button
                       variant="outline"
                       size="default"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors bg-transparent"
+                      className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors bg-transparent"
                       onClick={async () => {
                         if (
                           window.confirm(
@@ -1003,7 +1005,7 @@ const VesselManager: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                   <div className="space-y-3">
                     <Label className="text-sm text-slate-500 uppercase tracking-wide font-semibold">ETA</Label>
                     <p className="font-bold text-xl text-slate-800">{new Date(vessel.ETA).toLocaleDateString()}</p>
@@ -1073,17 +1075,17 @@ const VesselManager: React.FC = () => {
 
   const renderVesselForm = () => (
     <div className="w-full space-y-10">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h2 className="text-5xl font-bold text-blue-900">Add New Vessel</h2>
-          <p className="text-slate-600 mt-3 text-xl">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-blue-900">Add New Vessel</h2>
+          <p className="text-base sm:text-lg md:text-xl text-slate-600 mt-3">
             Create a comprehensive vessel record with detailed specifications
           </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <Button
             onClick={fillWithDemoData}
-            className="bg-green-600 hover:bg-green-700 shadow-lg text-white px-8 py-4 text-lg rounded-xl transition-colors"
+            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 shadow-lg text-white px-8 py-4 text-lg rounded-xl transition-colors"
             size="lg"
           >
             <Zap className="h-6 w-6 mr-3" />
@@ -1092,7 +1094,7 @@ const VesselManager: React.FC = () => {
           <Button
             onClick={() => setShowForm(false)}
             variant="outline"
-            className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+            className="w-full sm:w-auto px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-colors"
             size="lg"
           >
             Cancel
@@ -1111,33 +1113,33 @@ const VesselManager: React.FC = () => {
       <Card className="shadow-2xl border-0 rounded-2xl bg-white w-full">
         <CardContent className="p-10">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-12 h-20 bg-slate-100 rounded-2xl p-2">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-12 h-16 md:h-20 bg-slate-100 rounded-2xl p-2">
               <TabsTrigger
                 value="general"
-                className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
+                className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg px-3 py-3 sm:px-4 sm:py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
-                <Ship className="h-6 w-6" />
+                <Ship className="h-5 w-5 md:h-6 md:w-6" />
                 General Info
               </TabsTrigger>
               <TabsTrigger
                 value="parcels"
-                className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
+                className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg px-3 py-3 sm:px-4 sm:py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
-                <Package className="h-6 w-6" />
+                <Package className="h-5 w-5 md:h-6 md:w-6" />
                 Parcel Form
               </TabsTrigger>
               <TabsTrigger
                 value="costs"
-                className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
+                className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg px-3 py-3 sm:px-4 sm:py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
-                <Settings className="h-6 w-6" />
+                <Settings className="h-5 w-5 md:h-6 md:w-6" />
                 Cost Parameters
               </TabsTrigger>
               <TabsTrigger
                 value="rail"
-                className="flex items-center gap-3 text-lg px-6 py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
+                className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg px-3 py-3 sm:px-4 sm:py-4 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-colors"
               >
-                <Train className="h-6 w-6" />
+                <Train className="h-5 w-5 md:h-6 md:w-6" />
                 Rail Data
               </TabsTrigger>
             </TabsList>
@@ -1162,7 +1164,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.name}
                       onChange={(e) => setNewVessel({ ...newVessel, name: e.target.value })}
                       placeholder="e.g., MV Ocean Star"
-                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1175,7 +1177,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.capacity || ""}
                       onChange={(e) => setNewVessel({ ...newVessel, capacity: Number(e.target.value) })}
                       placeholder="e.g., 50000"
-                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1188,7 +1190,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.ETA}
                       onChange={(e) => setNewVessel({ ...newVessel, ETA: e.target.value })}
                       min={new Date().toISOString().split("T")[0]}
-                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1200,7 +1202,7 @@ const VesselManager: React.FC = () => {
                       value={newVessel.loadPort}
                       onChange={(e) => setNewVessel({ ...newVessel, loadPort: e.target.value })}
                       placeholder="Enter load port name"
-                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1217,7 +1219,7 @@ const VesselManager: React.FC = () => {
                           laydays: { ...newVessel.laydays, start: e.target.value },
                         })
                       }
-                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1235,7 +1237,7 @@ const VesselManager: React.FC = () => {
                         })
                       }
                       min={newVessel.laydays.start}
-                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -1266,7 +1268,7 @@ const VesselManager: React.FC = () => {
                         })
                       }
                       placeholder="e.g., BHP Billiton"
-                      className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                      className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-4">
@@ -1282,7 +1284,7 @@ const VesselManager: React.FC = () => {
                         })
                       }
                     >
-                      <SelectTrigger className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
+                      <SelectTrigger className="h-12 sm:h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
@@ -1297,12 +1299,12 @@ const VesselManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-between pt-8 border-t border-slate-200">
+              <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-8 border-t border-slate-200">
                 <Button
                   onClick={goToPreviousTab}
                   disabled={activeTab === tabOrder[0]}
                   variant="outline"
-                  className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
+                  className="w-full sm:w-auto px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
                   size="lg"
                 >
                   <ChevronLeft className="h-6 w-6 mr-2" />
@@ -1311,7 +1313,7 @@ const VesselManager: React.FC = () => {
                 <Button
                   onClick={goToNextTab}
                   disabled={activeTab === tabOrder[tabOrder.length - 1]}
-                  className="bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                 >
                   Next
@@ -1322,16 +1324,16 @@ const VesselManager: React.FC = () => {
 
             {/* Parcels Tab */}
             <TabsContent value="parcels" className="space-y-10">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
                     <Package className="h-6 w-6 text-white" />
                   </div>
-                  <h3 className="text-3xl font-bold text-slate-800">Cargo Parcels</h3>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-800">Cargo Parcels</h3>
                 </div>
                 <Button
                   onClick={addParcel}
-                  className="bg-purple-600 hover:bg-purple-700 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors"
+                  className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Add Parcel
@@ -1352,13 +1354,15 @@ const VesselManager: React.FC = () => {
                   {newVessel.parcels.map((parcel, index) => (
                     <Card key={parcel.id} className="shadow-xl border-0 rounded-2xl bg-white">
                       <CardHeader className="pb-6">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-2xl font-bold text-slate-800">Parcel {index + 1}</CardTitle>
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                          <CardTitle className="text-xl sm:text-2xl font-bold text-slate-800">
+                            Parcel {index + 1}
+                          </CardTitle>
                           <Button
                             onClick={() => removeParcel(parcel.id)}
                             variant="outline"
                             size="default"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
+                            className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
                           >
                             <Trash2 className="h-5 w-5" />
                           </Button>
@@ -1373,7 +1377,7 @@ const VesselManager: React.FC = () => {
                               value={parcel.size || ""}
                               onChange={(e) => updateParcel(parcel.id, "size", Number(e.target.value))}
                               placeholder="e.g., 25000"
-                              className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                              className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                             />
                           </div>
                           <div className="space-y-4">
@@ -1382,7 +1386,7 @@ const VesselManager: React.FC = () => {
                               value={parcel.loadPort || ""}
                               onChange={(e) => updateParcel(parcel.id, "loadPort", e.target.value)}
                               placeholder="Enter load port name"
-                              className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                              className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                             />
                           </div>
                           <div className="space-y-4">
@@ -1391,7 +1395,7 @@ const VesselManager: React.FC = () => {
                               value={parcel.materialType}
                               onValueChange={(value) => handleMaterialTypeChange(parcel.id, value)}
                             >
-                              <SelectTrigger className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
+                              <SelectTrigger className="h-12 sm:h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
                                 <SelectValue placeholder="Select material type" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl">
@@ -1410,7 +1414,7 @@ const VesselManager: React.FC = () => {
                               onValueChange={(value) => handleQualityGradeChange(parcel.id, value)}
                               disabled={!parcel.materialType}
                             >
-                              <SelectTrigger className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
+                              <SelectTrigger className="h-12 sm:h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
                                 <SelectValue placeholder="Select quality grade" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl">
@@ -1429,7 +1433,7 @@ const VesselManager: React.FC = () => {
                               value={parcel.qualitySpecs}
                               placeholder="Auto-populated based on quality grade"
                               readOnly
-                              className="bg-slate-100 h-14 text-lg border-2 border-slate-200 rounded-xl"
+                              className="bg-slate-100 h-12 sm:h-14 text-base sm:text-lg border-2 border-slate-200 rounded-xl"
                             />
                           </div>
                         </div>
@@ -1437,12 +1441,12 @@ const VesselManager: React.FC = () => {
                         <Separator className="my-8" />
 
                         <div className="space-y-8">
-                          <div className="flex justify-between items-center">
-                            <h4 className="font-bold text-2xl text-slate-800">Plant Allocations</h4>
+                          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                            <h4 className="font-bold text-xl sm:text-2xl text-slate-800">Plant Allocations</h4>
                             <Button
                               onClick={() => addPlantAllocation(parcel.id)}
                               variant="outline"
-                              className="px-6 py-3 text-lg rounded-xl border-2 border-green-300 bg-green-100 text-green-800 dark:bg-green-900 dark:border-green-700 dark:text-green-100 hover:border-green-400 hover:bg-green-200 hover:text-green-900 dark:hover:bg-green-800 dark:hover:border-green-600 dark:hover:text-green-50 shadow-md hover:shadow-lg transition-all duration-200 group"
+                              className="w-full sm:w-auto px-6 py-3 text-lg rounded-xl border-2 border-green-300 bg-green-100 text-green-800 dark:bg-green-900 dark:border-green-700 dark:text-green-100 hover:border-green-400 hover:bg-green-200 hover:text-green-900 dark:hover:bg-green-800 dark:hover:border-green-600 dark:hover:text-green-50 shadow-md hover:shadow-lg transition-all duration-200 group"
                             >
                               <Plus className="h-5 w-5 mr-2 text-green-800 group-hover:text-green-900 dark:text-green-100 dark:group-hover:text-green-50 group-hover:scale-110 transition-transform" />
                               Add Plant
@@ -1465,7 +1469,7 @@ const VesselManager: React.FC = () => {
                                             updatePlantAllocation(parcel.id, allocationIndex, "plantName", value)
                                           }
                                         >
-                                          <SelectTrigger className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
+                                          <SelectTrigger className="h-12 sm:h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
                                             <SelectValue placeholder="Select plant" />
                                           </SelectTrigger>
                                           <SelectContent className="rounded-xl">
@@ -1493,7 +1497,7 @@ const VesselManager: React.FC = () => {
                                             )
                                           }
                                           placeholder="MT"
-                                          className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                                          className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                                         />
                                       </div>
                                       <div className="space-y-4">
@@ -1522,7 +1526,7 @@ const VesselManager: React.FC = () => {
                                             )
                                           }
                                           placeholder="MT"
-                                          className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                                          className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                                         />
                                       </div>
                                     </div>
@@ -1540,17 +1544,17 @@ const VesselManager: React.FC = () => {
 
               {/* Port Preferences Section */}
               <div className="space-y-10">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center">
                       <Anchor className="h-6 w-6 text-white" />
                     </div>
-                    <h3 className="text-3xl font-bold text-slate-800">Port Preferences</h3>
+                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-800">Port Preferences</h3>
                   </div>
                   <Button
                     onClick={addPortPreference}
                     variant="outline"
-                    className="px-8 py-4 text-lg rounded-xl border-2 border-teal-300 bg-teal-100 text-teal-800 dark:bg-teal-900 dark:border-teal-700 dark:text-teal-100 hover:border-teal-400 hover:bg-teal-200 hover:text-teal-900 dark:hover:bg-teal-800 dark:hover:border-teal-600 dark:hover:text-teal-50 shadow-md hover:shadow-lg transition-all duration-200 group"
+                    className="w-full sm:w-auto px-8 py-4 text-lg rounded-xl border-2 border-teal-300 bg-teal-100 text-teal-800 dark:bg-teal-900 dark:border-teal-700 dark:text-teal-100 hover:border-teal-400 hover:bg-teal-200 hover:text-teal-900 dark:hover:bg-teal-800 dark:hover:border-teal-600 dark:hover:text-teal-50 shadow-md hover:shadow-lg transition-all duration-200 group"
                   >
                     <Plus className="h-5 w-5 mr-2 text-teal-800 group-hover:text-teal-900 dark:text-teal-100 dark:group-hover:text-teal-50 group-hover:scale-110 transition-transform" />
                     Add Port Preference
@@ -1573,7 +1577,7 @@ const VesselManager: React.FC = () => {
                     {newVessel.portPreferences.map((preference, index) => (
                       <Card key={index} className="shadow-xl border-0 rounded-2xl bg-white">
                         <CardHeader className="pb-6">
-                          <div className="flex justify-between items-center">
+                          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                             <CardTitle className="text-2xl font-bold text-slate-800">
                               Port Preference {index + 1}
                             </CardTitle>
@@ -1581,7 +1585,7 @@ const VesselManager: React.FC = () => {
                               onClick={() => removePortPreference(index)}
                               variant="outline"
                               size="default"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
+                              className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
                             >
                               <Trash2 className="h-5 w-5" />
                             </Button>
@@ -1595,7 +1599,7 @@ const VesselManager: React.FC = () => {
                                 value={preference.portName}
                                 onValueChange={(value) => updatePortPreference(index, "portName", value)}
                               >
-                                <SelectTrigger className="h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
+                                <SelectTrigger className="h-12 sm:h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
                                   <SelectValue placeholder="Select port" />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl">
@@ -1618,7 +1622,7 @@ const VesselManager: React.FC = () => {
                                   updatePortPreference(index, "portStockAvailability", Number(e.target.value))
                                 }
                                 placeholder="Enter stock availability in MT"
-                                className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                                className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                               />
                             </div>
                           </div>
@@ -1644,8 +1648,13 @@ const VesselManager: React.FC = () => {
                               <Label className="text-lg font-bold text-slate-800">Discharge Order</Label>
                               <div className="space-y-4">
                                 {preference.dischargeOrder.map((port, orderIndex) => (
-                                  <div key={orderIndex} className="flex items-center space-x-4">
-                                    <span className="text-lg text-slate-600 w-10 font-semibold">{orderIndex + 1}.</span>
+                                  <div
+                                    key={orderIndex}
+                                    className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4"
+                                  >
+                                    <span className="text-lg text-slate-600 w-auto sm:w-10 font-semibold">
+                                      {orderIndex + 1}.
+                                    </span>
                                     <Select
                                       value={port}
                                       onValueChange={(value) => {
@@ -1654,7 +1663,7 @@ const VesselManager: React.FC = () => {
                                         updatePortPreference(index, "dischargeOrder", newOrder)
                                       }}
                                     >
-                                      <SelectTrigger className="flex-1 h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
+                                      <SelectTrigger className="w-full h-12 sm:h-14 text-lg border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors">
                                         <SelectValue placeholder="Select port" />
                                       </SelectTrigger>
                                       <SelectContent className="rounded-xl">
@@ -1672,7 +1681,7 @@ const VesselManager: React.FC = () => {
                                       }}
                                       variant="outline"
                                       size="sm"
-                                      className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
+                                      className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -1684,7 +1693,7 @@ const VesselManager: React.FC = () => {
                                     updatePortPreference(index, "dischargeOrder", newOrder)
                                   }}
                                   variant="outline"
-                                  className="px-6 py-3 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                                  className="w-full sm:w-auto px-6 py-3 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
                                 >
                                   <Plus className="h-5 w-5 mr-2" />
                                   Add Port to Order
@@ -1697,12 +1706,12 @@ const VesselManager: React.FC = () => {
                     ))}
                   </div>
                 )}
-                <div className="flex justify-between pt-8 border-t border-slate-200">
+                <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-8 border-t border-slate-200">
                   <Button
                     onClick={goToPreviousTab}
                     disabled={activeTab === tabOrder[0]}
                     variant="outline"
-                    className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
+                    className="w-full sm:w-auto px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
                     size="lg"
                   >
                     <ChevronLeft className="h-6 w-6 mr-2" />
@@ -1711,7 +1720,7 @@ const VesselManager: React.FC = () => {
                   <Button
                     onClick={goToNextTab}
                     disabled={activeTab === tabOrder[tabOrder.length - 1]}
-                    className="bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     size="lg"
                   >
                     Next
@@ -1742,7 +1751,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter fringe ocean cost"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1757,7 +1766,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter fringe rail cost"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1772,7 +1781,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter demurrage rate"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1787,7 +1796,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter maximum port calls"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1802,7 +1811,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter port handling fees"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1817,7 +1826,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter storage cost"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1832,7 +1841,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter free time in days"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1847,17 +1856,17 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter port differential cost"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-between pt-8 border-t border-slate-200">
+              <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-8 border-t border-slate-200">
                 <Button
                   onClick={goToPreviousTab}
                   disabled={activeTab === tabOrder[0]}
                   variant="outline"
-                  className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
+                  className="w-full sm:w-auto px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
                   size="lg"
                 >
                   <ChevronLeft className="h-6 w-6 mr-2" />
@@ -1866,7 +1875,7 @@ const VesselManager: React.FC = () => {
                 <Button
                   onClick={goToNextTab}
                   disabled={activeTab === tabOrder[tabOrder.length - 1]}
-                  className="bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                 >
                   Next
@@ -1896,7 +1905,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter rake capacity in MT"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1911,7 +1920,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter loading time per day"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="space-y-4">
@@ -1926,7 +1935,7 @@ const VesselManager: React.FC = () => {
                       })
                     }
                     placeholder="Enter number of rakes required"
-                    className="h-14 text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
+                    className="h-12 sm:h-14 text-xl sm:text-2xl font-bold border-2 border-slate-200 rounded-xl focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div className="flex items-center space-x-4 pt-8">
@@ -1947,12 +1956,12 @@ const VesselManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-between pt-8 border-t border-slate-200">
+              <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-8 border-t border-slate-200">
                 <Button
                   onClick={goToPreviousTab}
                   disabled={activeTab === tabOrder[0]}
                   variant="outline"
-                  className="px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
+                  className="w-full sm:w-auto px-8 py-4 text-lg rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent"
                   size="lg"
                 >
                   <ChevronLeft className="h-6 w-6 mr-2" />
@@ -1961,7 +1970,7 @@ const VesselManager: React.FC = () => {
                 <Button
                   onClick={goToNextTab}
                   disabled={activeTab === tabOrder[tabOrder.length - 1]}
-                  className="bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 px-8 py-4 text-lg rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                 >
                   Next
@@ -1974,7 +1983,7 @@ const VesselManager: React.FC = () => {
               <Button
                 onClick={submitVessel}
                 disabled={loading}
-                className="bg-blue-900 hover:bg-blue-800 px-12 py-4 text-lg rounded-xl shadow-xl transition-colors"
+                className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 px-12 py-4 text-lg rounded-xl shadow-xl transition-colors"
                 size="lg"
               >
                 {loading ? (
@@ -2013,17 +2022,17 @@ const VesselManager: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 w-full">
-      <div className="w-full max-w-none mx-auto p-8">
+      <div className="w-full max-w-none mx-auto p-4 sm:p-6 md:p-8">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-xl border-0 mb-10 overflow-hidden w-full">
-          <div className="bg-blue-900 px-10 py-8">
-            <div className="flex items-center space-x-6">
+          <div className="bg-blue-900 px-6 sm:px-8 md:px-10 py-6 md:py-8">
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-4 md:space-y-0">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                 <Ship className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold text-white">Vessel Management System</h1>
-                <p className="text-xl text-blue-100 mt-2">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">Vessel Management System</h1>
+                <p className="text-base sm:text-lg md:text-xl text-blue-100 mt-2">
                   Create and manage vessel data with comprehensive form validation
                 </p>
               </div>
@@ -2034,21 +2043,21 @@ const VesselManager: React.FC = () => {
         {/* Message Display */}
         {message && (
           <div
-            className={`mb-10 p-6 rounded-2xl flex items-center text-lg shadow-lg w-full ${
+            className={`mb-10 p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 text-lg shadow-lg w-full ${
               message.type === "success"
                 ? "bg-green-50 border-2 border-green-200 text-green-800"
                 : "bg-red-50 border-2 border-red-200 text-red-800"
             }`}
           >
             {message.type === "success" ? (
-              <CheckCircle className="h-7 w-7 mr-4 flex-shrink-0" />
+              <CheckCircle className="h-7 w-7 mr-0 sm:mr-4 flex-shrink-0" />
             ) : (
-              <XCircle className="h-7 w-7 mr-4 flex-shrink-0" />
+              <XCircle className="h-7 w-7 mr-0 sm:mr-4 flex-shrink-0" />
             )}
             <span className="font-medium">{message.text}</span>
             <button
               onClick={() => setMessage(null)}
-              className="ml-auto text-gray-400 hover:text-gray-600 transition-colors"
+              className="sm:ml-auto text-gray-400 hover:text-gray-600 transition-colors"
             >
               <XCircle className="h-6 w-6" />
             </button>
@@ -2057,7 +2066,7 @@ const VesselManager: React.FC = () => {
 
         {/* Main Content */}
         <div className="bg-white rounded-2xl shadow-xl border-0 w-full">
-          <div className="p-10 w-full">{showForm ? renderVesselForm() : renderVesselsList()}</div>
+          <div className="p-6 md:p-10 w-full">{showForm ? renderVesselForm() : renderVesselsList()}</div>
         </div>
       </div>
       <CSVUploadModal />
