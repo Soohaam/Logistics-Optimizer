@@ -1,13 +1,11 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { AlertCircle, CheckCircle, Ship, RefreshCw, Play } from "lucide-react"
 import OptimizationResults from "./OptimizationResults"
-
 
 interface OptimizationProps {
   vesselId?: string
@@ -26,10 +24,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     setError(null)
 
     try {
-      const response = await fetch(`http://localhost:5000/api/optimization/vessel/${vesselId}`, {
-        method: "GET",
-      })
-
+      const response = await fetch(`http://localhost:5000/api/optimization/vessel/${vesselId}`)
       const data = await response.json()
 
       if (!data.success) {
@@ -40,7 +35,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
 
       // If status is computing, poll for updates
       if (data.data.status === "computing") {
-        setTimeout(fetchOptimizationData, 5000) // Poll every 5 seconds
+        setTimeout(fetchOptimizationData, 5000)
       }
     } catch (err) {
       console.error("Error fetching optimization data:", err)
@@ -51,7 +46,6 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     }
   }
 
-  // Check for existing optimization on component mount
   useEffect(() => {
     fetchOptimizationData()
   }, [vesselId])
@@ -68,14 +62,13 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
 
       if (data.success) {
         setOptimizationData(data.data)
-        fetchOptimizationData() // Start polling
+        fetchOptimizationData()
       }
     } catch (err) {
       console.error("Error regenerating optimization:", err)
     }
   }
 
-  // Run optimization if no existing data
   const runOptimization = async () => {
     if (!vesselId) return
 
@@ -88,7 +81,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
 
       if (data.success) {
         setOptimizationData(data.data)
-        fetchOptimizationData() // Start polling
+        fetchOptimizationData()
       }
     } catch (err) {
       console.error("Error running optimization:", err)
@@ -137,7 +130,6 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     )
   }
 
-  // Show run optimization button if no data and initial check is done
   if (!optimizationData && initialCheckDone) {
     return (
       <Card className="w-full shadow-lg border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">
@@ -163,7 +155,6 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     )
   }
 
-  // Show loading state while checking for existing data
   if (!optimizationData && !initialCheckDone) {
     return (
       <Card className="w-full shadow-lg border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">
@@ -260,7 +251,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
               </div>
               <div className="space-y-2">
                 <p className="text-amber-800 font-semibold text-lg">Optimization in progress...</p>
-                <p className="text-amber-600 text-sm">This process typically takes 10-30 seconds to complete</p>
+                <p className="text-amber-600 text-sm">Analyzing vessel data, delays, and port-to-plant logistics</p>
                 <p className="text-amber-500 text-xs mt-2">Using AI optimization with fallback mechanisms for faster results</p>
               </div>
             </div>
@@ -269,7 +260,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
       )}
 
       {optimizationData.status === "completed" && optimizationData.optimizationResults && (
-        <OptimizationResults data={optimizationData} />
+        <OptimizationResults data={optimizationData} vesselId={vesselId} />
       )}
     </div>
   )

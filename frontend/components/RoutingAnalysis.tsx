@@ -1,241 +1,275 @@
-'use client';
+"use client"
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { MapPin, Ship, Train, Route, Clock, Fuel } from 'lucide-react';
+import React from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Badge } from "./ui/badge"
+import { MapPin, Navigation, Clock, Fuel, AlertTriangle } from "lucide-react"
 
 interface RoutingAnalysisProps {
-  routeData: any;
+  routeData: any
+  vesselId?: string
 }
 
 const RoutingAnalysis: React.FC<RoutingAnalysisProps> = ({ routeData }) => {
-  // If no data from backend, use sample data
-  const sampleRouteData = {
-    recommendedRoute: {
-      routeName: 'Eastern Corridor Route',
-      description: 'Optimized multi-modal route via Paradip Port with rail connectivity to Bhilai Steel Plant',
-      totalDistance: 485,
-      estimatedTime: 72,
-      fuelConsumption: 120,
-      weatherRisk: 'low',
-      advantages: ['Shortest distance', 'Best rail connectivity', 'Lower port congestion', 'Weather favorable'],
-      routeSequence: [
-        { step: 1, mode: 'Sea', from: 'Current Position', to: 'Paradip Port', distance: 285, time: 24, description: 'Direct sea route to Paradip Port' },
-        { step: 2, mode: 'Port', from: 'Paradip Port', to: 'Paradip Port', distance: 0, time: 12, description: 'Discharge and handling at port' },
-        { step: 3, mode: 'Rail', from: 'Paradip Port', to: 'Bhilai Steel Plant', distance: 485, time: 18, description: 'Rail transport via Eastern Railway' },
-        { step: 4, mode: 'Plant', from: 'Bhilai Steel Plant', to: 'Bhilai Steel Plant', distance: 0, time: 8, description: 'Unloading and processing at plant' }
-      ]
-    },
-    alternativeRoutes: [
-      {
-        routeName: 'Haldia-Durgapur Route',
-        description: 'Alternative route via Haldia Port with shorter rail distance to Durgapur',
-        totalDistance: 420,
-        estimatedTime: 68,
-        fuelConsumption: 105,
-        weatherRisk: 'medium',
-        advantages: ['Shorter rail distance', 'Modern port facilities', 'Good handling capacity'],
-        disadvantages: ['Higher port congestion', 'Weather dependent', 'Higher port charges'],
-        routeSequence: [
-          { step: 1, mode: 'Sea', from: 'Current Position', to: 'Haldia Port', distance: 255, time: 22, description: 'Sea route to Haldia Port' },
-          { step: 2, mode: 'Port', from: 'Haldia Port', to: 'Haldia Port', distance: 0, time: 14, description: 'Port operations and discharge' },
-          { step: 3, mode: 'Rail', from: 'Haldia Port', to: 'Durgapur Steel Plant', distance: 165, time: 8, description: 'Short rail haul to Durgapur' },
-          { step: 4, mode: 'Plant', from: 'Durgapur Steel Plant', to: 'Durgapur Steel Plant', distance: 0, time: 6, description: 'Plant operations' }
-        ]
-      },
-      {
-        routeName: 'Visakhapatnam-Rourkela Route',
-        description: 'Southern route via Visakhapatnam with established rail network',
-        totalDistance: 580,
-        estimatedTime: 84,
-        fuelConsumption: 145,
-        weatherRisk: 'high',
-        advantages: ['Established logistics network', 'Multiple steel plants access', 'Good port infrastructure'],
-        disadvantages: ['Longer distance', 'Higher fuel cost', 'Monsoon risk', 'Longer transit time'],
-        routeSequence: [
-          { step: 1, mode: 'Sea', from: 'Current Position', to: 'Visakhapatnam Port', distance: 315, time: 28, description: 'Extended sea route to Vizag' },
-          { step: 2, mode: 'Port', from: 'Visakhapatnam Port', to: 'Visakhapatnam Port', distance: 0, time: 16, description: 'Port handling and processing' },
-          { step: 3, mode: 'Rail', from: 'Visakhapatnam Port', to: 'Rourkela Steel Plant', distance: 520, time: 22, description: 'Long rail haul via central corridor' },
-          { step: 4, mode: 'Plant', from: 'Rourkela Steel Plant', to: 'Rourkela Steel Plant', distance: 0, time: 10, description: 'Plant unloading and storage' }
-        ]
-      }
-    ]
-  };
-  
-  const displayData = routeData && Object.keys(routeData).length > 0 ? routeData : sampleRouteData;
-  
-  if (!displayData) return <div>No routing data available</div>;
+  if (!routeData || !routeData.recommendedRoute) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">No routing data available</p>
+      </div>
+    )
+  }
+
+  const recommended = routeData.recommendedRoute
+  const alternatives = routeData.alternativeRoutes || []
+
+  const getWeatherRiskColor = (risk: string) => {
+    switch (risk?.toLowerCase()) {
+      case 'low': return 'bg-green-100 text-green-700 border-green-200'
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+      case 'high': return 'bg-red-100 text-red-700 border-red-200'
+      default: return 'bg-gray-100 text-gray-700 border-gray-200'
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {/* Recommended Route */}
-      <Card className="border-green-200 bg-green-50">
+      {/* Recommended Route - Main Card */}
+      <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-green-800 flex items-center gap-2">
-              <Route className="h-5 w-5" />
-              {displayData.recommendedRoute?.routeName || 'Recommended Route'}
+            <CardTitle className="text-2xl font-bold text-green-800 flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Navigation className="h-6 w-6 text-green-600" />
+              </div>
+              {recommended.routeName || 'Recommended Route'}
             </CardTitle>
-            <Badge className="bg-green-100 text-green-800">Optimal</Badge>
+            <Badge className="bg-green-600 text-white px-4 py-1.5">Optimal Route</Badge>
           </div>
         </CardHeader>
-        <CardContent>
-          {displayData.recommendedRoute?.description && (
-            <p className="text-green-700 mb-4">{displayData.recommendedRoute.description}</p>
+        <CardContent className="space-y-6">
+          {/* Route Description */}
+          {recommended.description && (
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <p className="text-green-800">{recommended.description}</p>
+            </div>
           )}
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="text-center p-3 bg-white rounded-lg">
-              <MapPin className="h-4 w-4 mx-auto mb-1 text-green-600" />
-              <p className="text-lg font-bold text-green-800">{displayData.recommendedRoute?.totalDistance}km</p>
-              <p className="text-sm text-green-600">Distance</p>
+
+          {/* Key Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="h-4 w-4 text-green-600" />
+                <p className="text-xs font-medium text-green-600">Distance</p>
+              </div>
+              <p className="text-2xl font-bold text-green-900">{recommended.totalDistance || 0} km</p>
             </div>
-            <div className="text-center p-3 bg-white rounded-lg">
-              <Clock className="h-4 w-4 mx-auto mb-1 text-green-600" />
-              <p className="text-lg font-bold text-green-800">{displayData.recommendedRoute?.estimatedTime}h</p>
-              <p className="text-sm text-green-600">Time</p>
+
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-green-600" />
+                <p className="text-xs font-medium text-green-600">Est. Time</p>
+              </div>
+              <p className="text-2xl font-bold text-green-900">{recommended.estimatedTime || 0}h</p>
             </div>
-            <div className="text-center p-3 bg-white rounded-lg">
-              <Fuel className="h-4 w-4 mx-auto mb-1 text-green-600" />
-              <p className="text-lg font-bold text-green-800">{displayData.recommendedRoute?.fuelConsumption}MT</p>
-              <p className="text-sm text-green-600">Fuel</p>
+
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Fuel className="h-4 w-4 text-green-600" />
+                <p className="text-xs font-medium text-green-600">Fuel</p>
+              </div>
+              <p className="text-2xl font-bold text-green-900">{recommended.fuelConsumption || 0} MT</p>
             </div>
-            <div className="text-center p-3 bg-white rounded-lg">
-              <Badge variant={displayData.recommendedRoute?.weatherRisk === 'low' ? 'default' : 'destructive'}>
-                {displayData.recommendedRoute?.weatherRisk}
+
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-green-600" />
+                <p className="text-xs font-medium text-green-600">Weather Risk</p>
+              </div>
+              <Badge className={getWeatherRiskColor(recommended.weatherRisk)}>
+                {recommended.weatherRisk || 'N/A'}
               </Badge>
-              <p className="text-sm text-green-600 mt-1">Weather Risk</p>
             </div>
           </div>
 
-          {/* Route Sequence */}
-          {displayData.recommendedRoute?.routeSequence && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-green-800 mb-3">Route Sequence</h4>
-              <div className="space-y-2">
-                {displayData.recommendedRoute.routeSequence.map((step: any, idx: number) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                    <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-full">
-                      {step.mode === 'Sea' && <Ship className="h-4 w-4 text-green-600" />}
-                      {step.mode === 'Rail' && <Train className="h-4 w-4 text-green-600" />}
-                      {step.mode === 'Port' && <MapPin className="h-4 w-4 text-green-600" />}
-                      {step.mode === 'Plant' && <div className="w-3 h-3 bg-green-600 rounded"></div>}
+          {/* Waypoints */}
+          {recommended.waypoints && recommended.waypoints.length > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <h4 className="font-semibold text-green-900 mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-green-600" />
+                Route Waypoints
+              </h4>
+              <div className="space-y-3">
+                {recommended.waypoints.map((waypoint: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-full text-green-700 font-bold text-sm flex-shrink-0">
+                      {idx + 1}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-green-800">Step {step.step}</span>
-                        <Badge variant="outline" className="text-xs">{step.mode}</Badge>
-                      </div>
-                      <p className="text-sm text-green-700">{step.description}</p>
-                      <div className="flex gap-4 mt-1 text-xs text-green-600">
-                        {step.distance > 0 && <span>{step.distance}km</span>}
-                        <span>{step.time}h</span>
-                      </div>
+                      <p className="font-medium text-green-900">{waypoint.name || `Waypoint ${idx + 1}`}</p>
+                      <p className="text-xs text-green-600">
+                        {waypoint.lat?.toFixed(4)}, {waypoint.lng?.toFixed(4)}
+                        {waypoint.type && (
+                          <Badge variant="outline" className="ml-2 text-xs">{waypoint.type}</Badge>
+                        )}
+                      </p>
                     </div>
+                    {idx < recommended.waypoints.length - 1 && (
+                      <div className="text-green-400">→</div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {displayData.recommendedRoute?.advantages && (
-            <div className="flex flex-wrap gap-2">
-              {displayData.recommendedRoute.advantages.map((advantage: string, idx: number) => (
-                <Badge key={idx} variant="outline" className="text-xs bg-green-100 text-green-700">
-                  {advantage}
-                </Badge>
-              ))}
+          {/* Advantages */}
+          {recommended.advantages && recommended.advantages.length > 0 && (
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <h4 className="font-semibold text-green-900 mb-3">Route Advantages</h4>
+              <div className="flex flex-wrap gap-2">
+                {recommended.advantages.map((advantage: string, idx: number) => (
+                  <Badge key={idx} variant="outline" className="bg-white text-green-700 border-green-300">
+                    ✓ {advantage}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Traffic Density */}
+          {recommended.trafficDensity && (
+            <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-green-200">
+              <span className="font-medium text-green-900">Traffic Density</span>
+              <Badge variant="outline" className={
+                recommended.trafficDensity === 'low' ? 'bg-green-50 text-green-700 border-green-300' :
+                recommended.trafficDensity === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
+                'bg-red-50 text-red-700 border-red-300'
+              }>
+                {recommended.trafficDensity}
+              </Badge>
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Alternative Routes */}
-      {displayData.alternativeRoutes && displayData.alternativeRoutes.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50">
+      {alternatives.length > 0 && (
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white shadow-md">
           <CardHeader>
-            <CardTitle className="text-blue-800">Alternative Routes</CardTitle>
+            <CardTitle className="text-xl font-bold text-blue-800 flex items-center gap-2">
+              <Navigation className="h-5 w-5 text-blue-600" />
+              Alternative Routes
+            </CardTitle>
+            <p className="text-sm text-blue-600 mt-1">
+              Other route options considered in the analysis
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {displayData.alternativeRoutes.map((route: any, index: number) => (
-                <div key={index} className="bg-white p-4 rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <h5 className="font-semibold text-blue-800">
+              {alternatives.map((route: any, index: number) => (
+                <div 
+                  key={index} 
+                  className="bg-white border border-blue-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-bold text-blue-900 text-lg">
                       {route.routeName || `Alternative Route ${index + 1}`}
-                    </h5>
+                    </h4>
                     <Badge className="bg-blue-100 text-blue-800">Alternative</Badge>
                   </div>
                   
                   {route.description && (
-                    <p className="text-blue-700 mb-3 text-sm">{route.description}</p>
+                    <p className="text-sm text-blue-700 mb-4">{route.description}</p>
                   )}
                   
-                  <div className="grid grid-cols-3 gap-4 mb-3">
-                    <div className="text-center p-2 bg-blue-50 rounded">
-                      <MapPin className="h-3 w-3 mx-auto mb-1 text-blue-600" />
-                      <p className="font-bold text-blue-800">{route.totalDistance}km</p>
-                      <p className="text-xs text-blue-600">Distance</p>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-blue-50 rounded p-3 text-center">
+                      <MapPin className="h-4 w-4 mx-auto mb-1 text-blue-600" />
+                      <p className="text-xs text-blue-600 mb-1">Distance</p>
+                      <p className="font-bold text-blue-900">{route.totalDistance || 0} km</p>
                     </div>
-                    <div className="text-center p-2 bg-blue-50 rounded">
-                      <Clock className="h-3 w-3 mx-auto mb-1 text-blue-600" />
-                      <p className="font-bold text-blue-800">{route.estimatedTime}h</p>
-                      <p className="text-xs text-blue-600">Time</p>
+                    <div className="bg-blue-50 rounded p-3 text-center">
+                      <Clock className="h-4 w-4 mx-auto mb-1 text-blue-600" />
+                      <p className="text-xs text-blue-600 mb-1">Time</p>
+                      <p className="font-bold text-blue-900">{route.estimatedTime || 0}h</p>
                     </div>
-                    <div className="text-center p-2 bg-blue-50 rounded">
-                      <Fuel className="h-3 w-3 mx-auto mb-1 text-blue-600" />
-                      <p className="font-bold text-blue-800">{route.fuelConsumption}MT</p>
-                      <p className="text-xs text-blue-600">Fuel</p>
+                    <div className="bg-blue-50 rounded p-3 text-center">
+                      <Fuel className="h-4 w-4 mx-auto mb-1 text-blue-600" />
+                      <p className="text-xs text-blue-600 mb-1">Fuel</p>
+                      <p className="font-bold text-blue-900">{route.fuelConsumption || 0} MT</p>
                     </div>
                   </div>
-                  
-                  {/* Route Sequence for alternatives */}
-                  {route.routeSequence && (
-                    <div className="mb-3">
-                      <h5 className="text-sm font-semibold text-blue-800 mb-2">Route Steps</h5>
-                      <div className="flex flex-wrap gap-1">
-                        {route.routeSequence.map((step: any, stepIdx: number) => (
-                          <div key={stepIdx} className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded text-xs">
-                            {step.mode === 'Sea' && <Ship className="h-3 w-3" />}
-                            {step.mode === 'Rail' && <Train className="h-3 w-3" />}
-                            {step.mode === 'Port' && <MapPin className="h-3 w-3" />}
-                            <span>{step.step}. {step.mode}</span>
-                          </div>
+
+                  {/* Waypoints preview */}
+                  {route.waypoints && route.waypoints.length > 0 && (
+                    <div className="bg-blue-50 rounded-lg p-3 mb-3">
+                      <p className="text-xs font-medium text-blue-700 mb-2">Route Path:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {route.waypoints.map((wp: any, wpIdx: number) => (
+                          <span key={wpIdx} className="text-xs text-blue-600">
+                            {wp.name}{wpIdx < route.waypoints.length - 1 ? ' →' : ''}
+                          </span>
                         ))}
                       </div>
                     </div>
                   )}
-                  
-                  <div className="flex justify-between items-center">
-                    {route.advantages && (
-                      <div className="flex flex-wrap gap-1">
-                        {route.advantages.map((advantage: string, idx: number) => (
-                          <Badge key={idx} variant="outline" className="text-xs bg-blue-100 text-blue-700">
-                            {advantage}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {route.disadvantages && (
-                      <div className="flex flex-wrap gap-1">
-                        {route.disadvantages.map((disadvantage: string, idx: number) => (
-                          <Badge key={idx} variant="outline" className="text-xs bg-orange-100 text-orange-700">
-                            {disadvantage}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {route.advantages && route.advantages.map((adv: string, advIdx: number) => (
+                      <Badge key={advIdx} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                        {adv}
+                      </Badge>
+                    ))}
+                    {route.disadvantages && route.disadvantages.map((dis: string, disIdx: number) => (
+                      <Badge key={disIdx} variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-300">
+                        {dis}
+                      </Badge>
+                    ))}
                   </div>
+
+                  {route.riskLevel && (
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-sm text-blue-700">Risk Level:</span>
+                      <Badge className={getWeatherRiskColor(route.riskLevel)}>
+                        {route.riskLevel}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
-    </div>
-  );
-};
 
-export default RoutingAnalysis;
+      {/* Route Comparison Summary */}
+      <Card className="border-border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Route Analysis Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="bg-muted/30 rounded-lg p-4">
+              <p className="text-muted-foreground mb-1">Routes Evaluated</p>
+              <p className="text-2xl font-bold text-foreground">{1 + alternatives.length}</p>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-4">
+              <p className="text-muted-foreground mb-1">Optimal Distance</p>
+              <p className="text-2xl font-bold text-green-600">{recommended.totalDistance || 0} km</p>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-4">
+              <p className="text-muted-foreground mb-1">Est. Fuel Savings</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {alternatives.length > 0 && alternatives[0].fuelConsumption ? 
+                  `${Math.round(alternatives[0].fuelConsumption - recommended.fuelConsumption)} MT` : 
+                  'N/A'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default RoutingAnalysis

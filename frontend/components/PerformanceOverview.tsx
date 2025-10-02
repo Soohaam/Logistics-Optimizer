@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
@@ -8,24 +8,28 @@ import { ArrowRight, CheckCircle, Clock, DollarSign, Ship, TrendingUp } from "lu
 
 interface PerformanceOverviewProps {
   results: any
+  vesselId?: string
 }
 
 const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) => {
-  const metrics = results.performanceMetrics || {}
-  const costBenefit = results.costBenefitAnalysis || {}
-  const savings = costBenefit.savings || {}
+  const metrics = results?.performanceMetrics || {}
+  const costBenefit = results?.costBenefitAnalysis || {}
+  const savings = costBenefit?.savings || {}
+  const traditional = costBenefit?.traditional || {}
+  const optimized = costBenefit?.optimized || {}
 
-  // Calculate actual values based on real data
   const fuelSavingsPercent = savings.percentageSavings || 0
-  const timeSavingsPercent = savings.timeSavings ? Math.round((savings.timeSavings / (costBenefit.traditional?.timeRequired || 100)) * 100) : 0
+  const timeSavingsPercent = savings.timeSavings && traditional.timeRequired ? 
+    Math.round((savings.timeSavings / traditional.timeRequired) * 100) : 0
   const costSavingsPercent = savings.percentageSavings || 0
-  const co2ReductionPercent = savings.co2ReductionTonnes ? Math.min(100, Math.round((savings.co2ReductionTonnes / 50) * 100)) : 0
+  const co2ReductionPercent = savings.co2ReductionTonnes ? 
+    Math.min(100, Math.round((savings.co2ReductionTonnes / 50) * 100)) : 0
 
   return (
     <div className="space-y-8">
       {/* Main KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-border shadow-sm">
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
@@ -43,7 +47,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
           </CardContent>
         </Card>
 
-        <Card className="border-border shadow-sm">
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
@@ -59,7 +63,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
           </CardContent>
         </Card>
 
-        <Card className="border-border shadow-sm">
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
@@ -75,7 +79,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
           </CardContent>
         </Card>
 
-        <Card className="border-border shadow-sm">
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
@@ -100,7 +104,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30">
+              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors">
                 <span className="text-sm font-medium text-foreground">Fuel Savings</span>
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
@@ -111,7 +115,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
                   </span>
                 </div>
               </div>
-              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30">
+              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors">
                 <span className="text-sm font-medium text-foreground">Time Reduction</span>
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
@@ -122,7 +126,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
                   </span>
                 </div>
               </div>
-              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30">
+              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors">
                 <span className="text-sm font-medium text-foreground">Cost Reduction</span>
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
@@ -133,7 +137,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
                   </span>
                 </div>
               </div>
-              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30">
+              <div className="flex justify-between items-center p-4 rounded-lg bg-muted/30 hover:bg-muted/40 transition-colors">
                 <span className="text-sm font-medium text-foreground">Carbon Reduction</span>
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
@@ -204,11 +208,11 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
               <div className="space-y-3 text-sm bg-muted/30 rounded-lg p-4">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Time:</span>
-                  <span className="font-semibold text-foreground">{costBenefit.traditional?.timeRequired || 0}h</span>
+                  <span className="font-semibold text-foreground">{traditional.timeRequired || 0}h</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Fuel Cost:</span>
-                  <span className="font-semibold text-foreground">₹{costBenefit.traditional?.fuelCost?.toLocaleString() || 0}</span>
+                  <span className="font-semibold text-foreground">₹{traditional.fuelCost?.toLocaleString() || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Efficiency:</span>
@@ -238,11 +242,11 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ results }) =>
               <div className="space-y-3 text-sm bg-green-50 rounded-lg p-4 border border-green-100">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Time:</span>
-                  <span className="font-semibold text-green-700">{costBenefit.optimized?.timeRequired || 0}h (-{timeSavingsPercent}%)</span>
+                  <span className="font-semibold text-green-700">{optimized.timeRequired || 0}h (-{timeSavingsPercent}%)</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Fuel Cost:</span>
-                  <span className="font-semibold text-green-700">₹{costBenefit.optimized?.fuelCost?.toLocaleString() || 0} (-{fuelSavingsPercent}%)</span>
+                  <span className="font-semibold text-green-700">₹{optimized.fuelCost?.toLocaleString() || 0} (-{fuelSavingsPercent}%)</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Efficiency:</span>
