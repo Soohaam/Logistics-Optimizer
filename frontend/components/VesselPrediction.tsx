@@ -271,24 +271,42 @@ const VesselPrediction: React.FC = () => {
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="space-y-8">
         <TabsList className="grid w-full grid-cols-4 gap-2 bg-gray-100 p-2 rounded-xl shadow-sm">
-          {['vessel-details', 'delay-prediction', 'port-to-plant', 'optimization'].map((tab) => (
-            <TabsTrigger
-              key={tab}
-              value={tab}
-              disabled={
-                (tab === 'port-to-plant' && !delayPredictionLoaded) ||
-                (tab === 'optimization' && (!delayPredictionLoaded || !portToPlantLoaded))
-              }
-              className="py-3 px-4 rounded-lg font-medium text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed transition-all duration-200"
-            >
-              {tab === 'vessel-details' && <Ship className="h-5 w-5 mr-2" />}
-              {tab === 'delay-prediction' && <Calendar className="h-5 w-5 mr-2" />}
-              {tab === 'port-to-plant' && <Package className="h-5 w-5 mr-2" />}
-              {tab === 'optimization' && <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-              {tab.replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+  {['vessel-details', 'delay-prediction', 'port-to-plant', 'optimization'].map((tab) => (
+    <TabsTrigger
+      key={tab}
+      value={tab}
+      disabled={
+        (tab === 'port-to-plant' && !delayPredictionLoaded) ||
+        (tab === 'optimization' && (!delayPredictionLoaded || !portToPlantLoaded))
+      }
+      className="py-3 px-4 rounded-lg font-bold text-lg text-gray-700 
+                 data-[state=active]:bg-primary data-[state=active]:text-white 
+                 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed 
+                 transition-all duration-200"
+    >
+      {tab === 'vessel-details' && <Ship className="h-5 w-5 mr-2" />}
+      {tab === 'delay-prediction' && <Calendar className="h-5 w-5 mr-2" />}
+      {tab === 'port-to-plant' && <Package className="h-5 w-5 mr-2" />}
+      {tab === 'optimization' && (
+        <svg
+          className="h-5 w-5 mr-2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
+        </svg>
+      )}
+      {tab.replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+    </TabsTrigger>
+  ))}
+</TabsList>
+
 
 
           <TabsContent value="vessel-details" className="space-y-8">
