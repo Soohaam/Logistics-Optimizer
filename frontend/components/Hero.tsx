@@ -56,15 +56,36 @@ const Hero: React.FC = () => {
           </div>
 
           {/* Heading */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-tight mb-6 drop-shadow-md">
+          <h1 className="text-3xl sm:text-4xl mb-2 md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-tight mb-6 drop-shadow-md">
             Steel India's Future
             <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mt-2 text-white">
               with Smart Logistics
             </span>
           </h1>
 
+           {/* Buttons */}
+           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <Button
+              size="lg"
+              className="bg-neon-blue hover:bg-neon-blue/80 text-white font-semibold px-6 py-3 rounded-xl text-base sm:text-lg"
+            >
+              Optimize SAIL Operations
+            </Button>
+            <Button
+  variant="outline"
+  size="lg"
+  className="relative border-2 border-purple-500 text-black font-semibold px-6 py-3 rounded-xl text-base sm:text-lg bg-gradient-to-r from-purple-50 to-white shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] hover:border-purple-600 hover:bg-purple-100 hover:text-black transition-all duration-300 ease-in-out hover:scale-105 focus:ring-4 focus:ring-purple-300"
+  onClick={handleNavigate}
+>
+  <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-pink-400/10 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none" />
+  <Play className="w-5 h-5 mr-2 text-purple-600" />
+  Create a Vessel
+</Button>
+
+          </div>
+
           {/* Paragraph */}
-          <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-8 max-w-2xl leading-relaxed mx-auto lg:mx-0">
+          <p className="text-base mt-8 sm:text-lg md:text-xl text-gray-200 mb-8 max-w-2xl leading-relaxed mx-auto lg:mx-0">
             Revolutionize SAIL's raw material logistics with AI-driven vessel
             scheduling, port-to-plant optimization, and cost-efficient dispatch
             across India's largest steel manufacturing network.
@@ -89,24 +110,7 @@ const Hero: React.FC = () => {
             ))}
           </div>
 
-          {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-            <Button
-              size="lg"
-              className="bg-neon-blue hover:bg-neon-blue/80 text-white font-semibold px-6 py-3 rounded-xl text-base sm:text-lg"
-            >
-              Optimize SAIL Operations
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-neon-purple/30 text-black font-semibold px-6 py-3 rounded-xl text-base sm:text-lg"
-              onClick={handleNavigate}
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Create a Vessel
-            </Button>
-          </div>
+         
 
           {/* Stats */}
           <div className="flex flex-wrap justify-center lg:justify-start gap-6 mt-10 pt-6 border-t border-gray-700">

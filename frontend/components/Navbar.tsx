@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Menu, X } from "lucide-react";
+import Link from "next/link";
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,8 +13,7 @@ const Navbar: React.FC = () => {
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Dashboard", href: "/vessel-manager" },
-    { name: "Simulation", href: "/simulation" },
-    { name: "Map", href: "/map" },
+    { name: "Simulation", href: "https://sail-simulation.vercel.app/", external: true },
   ];
 
   const toggleMenu = () => {
@@ -27,16 +27,20 @@ const Navbar: React.FC = () => {
         <div className="w-full mx-auto px-2 sm:px-4 lg:px-6">
           <div className="flex items-center justify-between h-16 sm:h-22">
             {/* Logo Section */}
-            <div className="flex items-center justify-start min-w-[120px] sm:min-w-[200px] pl-2 sm:pl-4 lg:pl-6">
-              <Image
-                src="/navimg.png"
-                alt="Company Logo"
-                width={150}
-                height={150}
-                className="object-contain w-24 sm:w-40"
-                priority
-              />
-            </div>
+           
+
+<div className="flex items-center justify-start min-w-[120px] sm:min-w-[200px] pl-2 sm:pl-4 lg:pl-6">
+  <Link href="/">
+    <Image
+      src="/navimg.png"
+      alt="Company Logo"
+      width={150}
+      height={150}
+      className="object-contain w-24 sm:w-40"
+      priority
+    />
+  </Link>
+</div>
 
             {/* Hamburger Menu for Mobile */}
             <div className="flex items-center lg:hidden pr-2 sm:pr-4">

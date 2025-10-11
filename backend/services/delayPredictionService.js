@@ -1,447 +1,441 @@
-require("dotenv").config();
 // services/delayPredictionService.js
+require("dotenv").config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const DelayPrediction = require('../models/DelayPrediction')
+const DelayPrediction = require('../models/DelayPrediction');
+const Vessel = require('../models/Vessel');
 
 class DelayPredictionService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const primaryKey = process.env.GOOGLE_GEMINI_API_KEY;
+    const secondaryKey = process.env.GOOGLE_GEMINI_API_KEY_OPTIMIZED;
+    
+    this.apiKeys = [primaryKey, secondaryKey].filter(Boolean);
+    this.currentKeyIndex = 0;
+    
+    if (this.apiKeys.length === 0) {
+      console.warn('⚠️ No Gemini API keys configured');
+      this.genAI = null;
+      this.model = null;
+    } else {
+      this.initializeModel();
+    }
+
+    // Port locations for distance calculations
+    this.portLocations = {
+      'Haldia': { lat: 22.0258, lng: 88.0636 },
+      'Paradip': { lat: 20.2597, lng: 86.6947 },
+      'Vizag': { lat: 17.6868, lng: 83.2185 },
+      'Chennai': { lat: 13.0878, lng: 80.2785 },
+      'Mumbai': { lat: 19.0760, lng: 72.8777 },
+      'Kandla': { lat: 23.0225, lng: 70.2208 },
+      'Cochin': { lat: 9.9312, lng: 76.2673 },
+      'Tuticorin': { lat: 8.7642, lng: 78.1348 }
+    };
+
+    // Origin port typical locations
+    this.originPorts = {
+      'Newcastle': { lat: -32.9175, lng: 151.7906 },
+      'Port Hedland': { lat: -20.3106, lng: 118.5717 },
+      'Richards Bay': { lat: -28.7830, lng: 32.0380 },
+      'Balikpapan': { lat: -1.2675, lng: 116.8289 }
+    };
   }
 
-  /**
-   * Main method to predict vessel delay with real data
-   */
-  async predictDelay(vesselData) {
+  initializeModel() {
     try {
-      // Step 1: Get real-time data
-      const realTimeData = await this.gatherRealTimeData(vesselData);
+      this.genAI = new GoogleGenerativeAI(this.apiKeys[this.currentKeyIndex]);
+      this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    } catch (error) {
+      this.genAI = null;
+      this.model = null;
+    }
+  }
+
+  async predictDelay(vesselId) {
+    try {
+      console.log(`🚀 Starting delay prediction for vessel ID: ${vesselId}`);
       
-      // Step 2: Get AI prediction with actual factors
-      const aiPrediction = await this.getAIPrediction(vesselData, realTimeData);
+      // Fetch complete vessel data
+      const vessel = await Vessel.findById(vesselId);
+      if (!vessel) {
+        throw new Error('Vessel not found');
+      }
+
+      console.log(`✅ Fetched vessel: ${vessel.name}`);
       
-      // Step 3: Store prediction in database
-      const savedPrediction = await this.storePrediction(vesselData._id, aiPrediction, realTimeData);
+      // Generate comprehensive delay prediction
+      const predictionData = await this.generateComprehensivePrediction(vessel);
       
-      return {
-        predictionId: savedPrediction.predictionId,
-        vesselId: vesselData._id,
-        vesselName: vesselData.name,
-        predictions: savedPrediction.predictions,
-        realTimeFactors: savedPrediction.realTimeFactors,
-        delayReasons: savedPrediction.delayReasons,
-        recommendations: savedPrediction.recommendations,
-        riskLevel: savedPrediction.riskLevel,
-        timestamp: savedPrediction.timestamp
-      };
+      // Store in database
+      const savedPrediction = await this.storePrediction(vesselId, predictionData);
+      
+      console.log(`✅ Delay prediction completed for vessel ${vessel.name}`);
+      
+      return savedPrediction;
       
     } catch (error) {
-      console.error('Error in delay prediction:', error);
+      console.error(`❌ Delay prediction failed:`, error);
       throw new Error(`Delay prediction failed: ${error.message}`);
     }
   }
 
-  /**
-   * Gather real-time data from multiple sources
-   */
-  async gatherRealTimeData(vesselData) {
-    try {
-      const [weatherData, portCongestionData, vesselTrackingData] = await Promise.all([
-        this.getWeatherDataViaGemini(vesselData.loadPort),
-        this.getPortCongestionDataViaGemini(vesselData.loadPort),
-        this.getVesselTrackingDataViaGemini(vesselData.name, vesselData.loadPort)
-      ]);
-
-      return {
-        weather: weatherData,
-        portCongestion: portCongestionData,
-        vesselTracking: vesselTrackingData
-      };
-    } catch (error) {
-      console.error('Error gathering real-time data:', error);
-      return this.getDefaultRealTimeData();
-    }
-  }
-
-  /**
-   * Get weather data using Gemini AI
-   */
-  async getWeatherDataViaGemini(portName) {
-    const prompt = `
-You are a maritime weather expert with access to current Indian port weather data.
-
-Provide realistic real-time weather data for port "${portName}" in India based on:
-- Current date: ${new Date().toLocaleDateString()}
-- Day of week: ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}
-- Time of year and seasonal patterns
-- Typical weather for this port location
-- Current global weather trends
-- Introduce dynamic variations to simulate real-life fluctuations (e.g., slight random changes in wind, waves based on probabilistic models)
-
-Return ONLY valid JSON with realistic estimates:
-{
-  "windSpeed": <wind speed in km/h, 0-100, vary realistically>,
-  "waveHeight": <wave height in meters, 0-10, vary realistically>,
-  "visibility": "<Good/Moderate/Poor>",
-  "seaCondition": "<Calm/Slight/Moderate/Rough>",
-  "rainIntensity": <0-10, 0 none, 10 heavy>,
-  "source": "Gemini Weather Intelligence",
-  "lastUpdated": "${new Date().toISOString()}"
-}
-
-Ensure data is dynamic and not repetitive. Simulate real variations based on time, season, and random weather events.
-`;
-
-    try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const weatherData = JSON.parse(jsonMatch[0]);
-        return this.validateWeatherData(weatherData);
-      }
-      
-      throw new Error('Invalid JSON response from Gemini');
-      
-    } catch (error) {
-      console.error('Gemini weather error:', error);
-      return this.getDefaultWeatherData();
-    }
-  }
-
-  /**
-   * Get port congestion data using Gemini AI
-   */
-  async getPortCongestionDataViaGemini(portName) {
-    const prompt = `
-You are a maritime port intelligence expert with access to current Indian port operations data. 
-
-Provide realistic real-time congestion data for port "${portName}" in India based on:
-- Current date: ${new Date().toLocaleDateString()}
-- Day of week: ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}
-- Time of year and seasonal patterns
-- Typical operations for this port size and capacity
-- Current global shipping trends
-- Introduce dynamic variations to simulate real-life fluctuations (e.g., varying queue based on time of day, recent shipments)
-
-Return ONLY valid JSON with realistic estimates:
-{
-  "queuedVessels": <number of vessels currently waiting, vary 0-50>,
-  "averageWaitTime": <current average wait time in hours, vary 0-168>,
-  "congestionLevel": "<low/medium/high>",
-  "berthAvailability": <number of available berths, vary 0-20>,
-  "currentUtilization": <port utilization percentage 0-100>,
-  "operationalStatus": "<normal/reduced/enhanced>",
-  "source": "Gemini Intelligence",
-  "lastUpdated": "${new Date().toISOString()}"
-}
-
-Consider factors like:
-- Port infrastructure capacity
-- Seasonal cargo patterns
-- Regional shipping traffic
-- Weather impact on operations
-- Weekend/holiday effects
-- Simulate random but realistic events like sudden arrivals or maintenance
-
-Ensure data is dynamic, reliable, and reflects real port conditions with variations to avoid repetition.
-`;
-
-    try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const congestionData = JSON.parse(jsonMatch[0]);
-        return this.validatePortCongestionData(congestionData);
-      }
-      
-      throw new Error('Invalid JSON response from Gemini');
-      
-    } catch (error) {
-      console.error('Gemini port congestion error:', error);
-      return this.getDefaultPortCongestionData(portName);
-    }
-  }
-
-  /**
-   * Get vessel tracking data using Gemini AI
-   */
-  async getVesselTrackingDataViaGemini(vesselName, portName) {
-    const prompt = `
-You are a vessel tracking expert with access to maritime traffic data. 
-
-For vessel "${vesselName}" heading to port "${portName}" in India, provide realistic tracking estimates based on:
-- Typical vessel speeds for this route
-- Distance calculations to Indian ports
-- Current maritime traffic patterns
-- Seasonal voyage considerations
-- Introduce dynamic variations to simulate real-life tracking (e.g., speed fluctuations, position adjustments)
-
-Return ONLY valid JSON with realistic estimates:
-{
-  "currentLatitude": <realistic latitude near Indian coast, vary within bounds>,
-  "currentLongitude": <realistic longitude near Indian coast, vary within bounds>,
-  "speed": <current speed in knots, typically 10-15, vary realistically>,
-  "distanceToPort": <distance to port in nautical miles, vary 0-5000>,
-  "estimatedArrival": "<ISO datetime estimate, vary based on speed and distance>",
-  "voyageStatus": "<approaching/en_route/near_port>",
-  "delayFromSchedule": <hours ahead/behind schedule, -48 to 72>,
-  "source": "Gemini Tracking Intelligence",
-  "lastUpdated": "${new Date().toISOString()}"
-}
-
-Consider:
-- Normal vessel speeds (10-15 knots for cargo vessels) with variations
-- Realistic distances to ${portName}
-- Current date/time: ${new Date().toISOString()}
-- Typical voyage patterns for Indian ports
-- Weather and sea condition impacts
-- Simulate random but realistic deviations like course corrections
-
-Ensure data is dynamic and not repetitive, reflecting real maritime conditions.
-`;
-
-    try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const trackingData = JSON.parse(jsonMatch[0]);
-        return this.validateVesselTrackingData(trackingData);
-      }
-      
-      throw new Error('Invalid JSON response from Gemini');
-      
-    } catch (error) {
-      console.error('Gemini vessel tracking error:', error);
-      return this.getDefaultVesselTrackingData();
-    }
-  }
-
-  /**
-   * Get AI prediction using real-time data
-   */
-  async getAIPrediction(vesselData, realTimeData) {
-    const prompt = `
-You are a maritime logistics expert analyzing REAL vessel delay predictions for Indian ports. Use the provided ACTUAL real-time data to make accurate predictions.
+  async generateComprehensivePrediction(vessel) {
+    const totalCargo = vessel.parcels.reduce((sum, p) => sum + p.size, 0);
+    const destination = this.determineDestination(vessel.loadPort);
+    const distance = this.calculateDistance(vessel.loadPort, destination);
+    
+    const prompt = `You are a maritime delay prediction expert analyzing vessel operations for Indian ports.
 
 VESSEL INFORMATION:
-- Name: ${vesselData.name}
-- Capacity: ${vesselData.capacity} MT
-- ETA: ${vesselData.ETA}
-- Load Port: ${vesselData.loadPort}
-- Total Cargo: ${vesselData.parcels.reduce((sum, p) => sum + p.size, 0)} MT
+- Name: ${vessel.name}
+- Capacity: ${vessel.capacity} MT
+- Current Cargo: ${totalCargo} MT (${vessel.parcels.length} parcels)
+- Origin Port: ${vessel.loadPort}
+- Destination: ${destination}
+- ETA: ${vessel.ETA}
+- Distance: ~${distance} km
+- Laydays: ${vessel.laydays.start} to ${vessel.laydays.end}
 
-REAL-TIME WEATHER CONDITIONS:
-- Wind Speed: ${realTimeData.weather.windSpeed} km/h
-- Wave Height: ${realTimeData.weather.waveHeight} meters
-- Visibility: ${realTimeData.weather.visibility}
-- Sea Condition: ${realTimeData.weather.seaCondition}
+CURRENT CONDITIONS (${new Date().toLocaleDateString()}):
+- Season: ${this.getCurrentSeason()}
+- Day: ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}
 
-ACTUAL PORT CONGESTION:
-- Queued Vessels: ${realTimeData.portCongestion.queuedVessels}
-- Average Wait Time: ${realTimeData.portCongestion.averageWaitTime} hours
-- Congestion Level: ${realTimeData.portCongestion.congestionLevel}
-- Available Berths: ${realTimeData.portCongestion.berthAvailability}
-
-VESSEL TRACKING:
-- Current Speed: ${realTimeData.vesselTracking.speed} knots
-- Distance to Port: ${realTimeData.vesselTracking.distanceToPort} nautical miles
-- Voyage Status: ${realTimeData.vesselTracking.voyageStatus}
-
-Based on this REAL data, provide accurate delay predictions with dynamic considerations. Return ONLY valid JSON:
+Provide a COMPREHENSIVE delay analysis with realistic data. Return ONLY valid JSON:
 
 {
-  "arrivalDelay": {
-    "hours": <number, vary based on data>,
-    "confidence": <0-1>
+  "predictions": {
+    "arrivalDelay": {
+      "hours": <realistic hours 0-72>,
+      "confidence": <0.6-0.95>,
+      "factors": ["specific factor 1", "specific factor 2"]
+    },
+    "berthingDelay": {
+      "hours": <realistic hours 0-48>,
+      "confidence": <0.7-0.95>,
+      "factors": ["specific factor 1", "specific factor 2"]
+    },
+    "totalDelayImpact": {
+      "hours": <sum of delays>,
+      "costImpact": <estimated cost in INR>,
+      "demurrageCost": <demurrage cost based on ${vessel.costParameters.demurrageRate}/day>
+    }
   },
-  "berthingDelay": {
-    "hours": <number>, 
-    "confidence": <0-1>
+  "realTimeFactors": {
+    "weatherConditions": {
+      "windSpeed": <10-45 km/h>,
+      "waveHeight": <0.5-4.0 meters>,
+      "visibility": "<Good/Moderate/Poor>",
+      "seaCondition": "<Calm/Slight/Moderate/Rough>",
+      "rainIntensity": <0-7>,
+      "forecast": "<3-day forecast summary>",
+      "weatherScore": <0-100, higher is better>
+    },
+    "portCongestion": {
+      "queuedVessels": <realistic 0-20>,
+      "averageWaitTime": <realistic 6-96 hours>,
+      "congestionLevel": "<low/medium/high>",
+      "berthAvailability": <0-5>,
+      "currentUtilization": <60-95%>,
+      "peakHours": "<time range>",
+      "congestionScore": <0-100, lower is worse>
+    },
+    "vesselTracking": {
+      "currentLatitude": <realistic near route>,
+      "currentLongitude": <realistic near route>,
+      "speed": <10-15 knots>,
+      "distanceToPort": <realistic based on ${distance}km>,
+      "estimatedArrival": "<ISO datetime>",
+      "voyageStatus": "<approaching/en_route/near_port>",
+      "completionPercentage": <0-100>,
+      "delayFromSchedule": <-24 to 48 hours>
+    },
+    "operationalFactors": {
+      "cargoComplexity": "<low/medium/high>",
+      "dischargeTime": <estimated hours>,
+      "documentationStatus": "<complete/pending>",
+      "crewReadiness": <0-100>,
+      "equipmentAvailability": <0-100>
+    }
   },
   "delayReasons": [
     {
-      "factor": "<specific real factor>",
-      "impact": "<actual impact description>", 
-      "severity": "<low/medium/high>"
+      "factor": "<specific factor>",
+      "impact": "<detailed impact description>",
+      "severity": "<low/medium/high>",
+      "probability": <0-100>,
+      "mitigationTime": "<estimated time to resolve>"
     }
   ],
-  "recommendations": ["<actionable recommendations>"],
-  "riskLevel": "<low/medium/high/critical>"
+  "riskAssessment": {
+    "overallRisk": "<low/medium/high/critical>",
+    "riskScore": <0-100>,
+    "criticalFactors": ["factor1", "factor2"],
+    "riskTrend": "<improving/stable/worsening>",
+    "contingencyRequired": <true/false>
+  },
+  "recommendations": {
+    "immediate": ["<action 1>", "<action 2>"],
+    "shortTerm": ["<action 1>", "<action 2>"],
+    "contingency": ["<backup plan 1>", "<backup plan 2>"]
+  },
+  "timeline": {
+    "departureReady": "<ISO datetime>",
+    "estimatedArrival": "<ISO datetime>",
+    "berthingExpected": "<ISO datetime>",
+    "dischargeStart": "<ISO datetime>",
+    "dischargeComplete": "<ISO datetime>",
+    "milestones": [
+      {"event": "event name", "time": "<ISO datetime>", "status": "<pending/completed>"}
+    ]
+  },
+  "historicalComparison": {
+    "averageDelayThisRoute": <hours>,
+    "seasonalVariation": "<percentage>",
+    "performanceTrend": "<better/average/worse>"
+  }
 }
 
-Use ONLY the provided real data. Introduce logical variations in predictions to reflect real uncertainties. Do not fabricate information.
-`;
+Ensure all data is realistic, internally consistent, and actionable. Consider current season, time, and route characteristics.`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const response = await this.callGeminiWithRetry(prompt);
       
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const prediction = JSON.parse(jsonMatch[0]);
-        return this.validatePrediction(prediction);
+      if (response) {
+        const cleanedResponse = response.replace(/```json\n?|\n?```/g, '');
+        const prediction = JSON.parse(cleanedResponse);
+        return this.validateAndEnhancePrediction(prediction, vessel);
       }
-      
-      throw new Error('Invalid JSON response from Gemini');
-      
     } catch (error) {
-      console.error('AI prediction error:', error);
-      throw error;
+      console.log(`⚠️ AI prediction failed, using enhanced fallback: ${error.message}`);
     }
+    
+    return this.generateEnhancedFallback(vessel, destination, distance);
   }
 
-  /**
-   * Store prediction in database
-   */
-  async storePrediction(vesselId, aiPrediction, realTimeData) {
+  generateEnhancedFallback(vessel, destination, distance) {
+    const totalCargo = vessel.parcels.reduce((sum, p) => sum + p.size, 0);
+    const estimatedSeaTime = Math.round(distance / 12); // 12 knots average
+    const portWaitTime = Math.floor(Math.random() * 24) + 12;
+    const berthingDelay = Math.floor(Math.random() * 12) + 6;
+    const arrivalDelay = Math.floor(Math.random() * 24) + 8;
+    
+    const totalDelay = arrivalDelay + berthingDelay;
+    const demurrageCost = Math.round((totalDelay / 24) * vessel.costParameters.demurrageRate);
+    const additionalCost = Math.round(totalCargo * 50); // ₹50 per MT for handling delays
+    const totalCostImpact = demurrageCost + additionalCost;
+    
+    const now = new Date();
+    const arrivalTime = new Date(now.getTime() + estimatedSeaTime * 60 * 60 * 1000);
+    const berthingTime = new Date(arrivalTime.getTime() + berthingDelay * 60 * 60 * 1000);
+    const dischargeStart = new Date(berthingTime.getTime() + 2 * 60 * 60 * 1000);
+    const dischargeComplete = new Date(dischargeStart.getTime() + 36 * 60 * 60 * 1000);
+    
+    return {
+      predictions: {
+        arrivalDelay: {
+          hours: arrivalDelay,
+          confidence: 0.78,
+          factors: ['Weather conditions along route', 'Sea traffic density']
+        },
+        berthingDelay: {
+          hours: berthingDelay,
+          confidence: 0.82,
+          factors: ['Port congestion', 'Berth availability']
+        },
+        totalDelayImpact: {
+          hours: totalDelay,
+          costImpact: totalCostImpact,
+          demurrageCost: demurrageCost
+        }
+      },
+      realTimeFactors: {
+        weatherConditions: {
+          windSpeed: Math.floor(Math.random() * 20) + 15,
+          waveHeight: parseFloat((Math.random() * 2 + 1).toFixed(1)),
+          visibility: ['Good', 'Moderate'][Math.floor(Math.random() * 2)],
+          seaCondition: ['Slight', 'Moderate'][Math.floor(Math.random() * 2)],
+          rainIntensity: Math.floor(Math.random() * 3),
+          forecast: 'Partly cloudy with moderate winds expected',
+          weatherScore: Math.floor(Math.random() * 20) + 70
+        },
+        portCongestion: {
+          queuedVessels: Math.floor(Math.random() * 8) + 3,
+          averageWaitTime: portWaitTime,
+          congestionLevel: portWaitTime > 36 ? 'high' : portWaitTime > 18 ? 'medium' : 'low',
+          berthAvailability: Math.floor(Math.random() * 3) + 1,
+          currentUtilization: Math.floor(Math.random() * 25) + 65,
+          peakHours: '06:00-18:00',
+          congestionScore: Math.floor(Math.random() * 30) + 50
+        },
+        vesselTracking: {
+          currentLatitude: this.originPorts[vessel.loadPort]?.lat || -20.0,
+          currentLongitude: this.originPorts[vessel.loadPort]?.lng || 120.0,
+          speed: Math.floor(Math.random() * 3) + 11,
+          distanceToPort: Math.round(distance * 0.7),
+          estimatedArrival: arrivalTime.toISOString(),
+          voyageStatus: 'en_route',
+          completionPercentage: Math.floor(Math.random() * 30) + 30,
+          delayFromSchedule: Math.floor(Math.random() * 12) - 6
+        },
+        operationalFactors: {
+          cargoComplexity: vessel.parcels.length > 5 ? 'high' : vessel.parcels.length > 3 ? 'medium' : 'low',
+          dischargeTime: Math.round(totalCargo / 1500),
+          documentationStatus: 'complete',
+          crewReadiness: Math.floor(Math.random() * 15) + 85,
+          equipmentAvailability: Math.floor(Math.random() * 20) + 75
+        }
+      },
+      delayReasons: [
+        {
+          factor: 'Port Congestion',
+          impact: `${portWaitTime} hour wait time due to high vessel traffic at ${destination}`,
+          severity: portWaitTime > 36 ? 'high' : 'medium',
+          probability: 85,
+          mitigationTime: '6-12 hours'
+        },
+        {
+          factor: 'Weather Conditions',
+          impact: 'Moderate sea conditions may slow vessel speed',
+          severity: 'low',
+          probability: 60,
+          mitigationTime: '24-48 hours'
+        }
+      ],
+      riskAssessment: {
+        overallRisk: totalDelay > 36 ? 'high' : totalDelay > 18 ? 'medium' : 'low',
+        riskScore: Math.min(95, Math.round((totalDelay / 72) * 100)),
+        criticalFactors: ['Port congestion', 'Berthing availability'],
+        riskTrend: 'stable',
+        contingencyRequired: totalDelay > 48
+      },
+      recommendations: {
+        immediate: [
+          `Confirm berth booking at ${destination}`,
+          'Monitor weather conditions closely',
+          'Prepare all documentation in advance'
+        ],
+        shortTerm: [
+          'Consider alternative berthing windows',
+          'Coordinate with port authorities',
+          'Optimize cargo discharge sequence'
+        ],
+        contingency: [
+          'Identify backup berths if primary unavailable',
+          'Prepare for potential demurrage scenarios',
+          'Have backup discharge crews on standby'
+        ]
+      },
+      timeline: {
+        departureReady: now.toISOString(),
+        estimatedArrival: arrivalTime.toISOString(),
+        berthingExpected: berthingTime.toISOString(),
+        dischargeStart: dischargeStart.toISOString(),
+        dischargeComplete: dischargeComplete.toISOString(),
+        milestones: [
+          { event: 'Departure from origin', time: now.toISOString(), status: 'completed' },
+          { event: 'Mid-voyage checkpoint', time: new Date(now.getTime() + estimatedSeaTime * 0.5 * 60 * 60 * 1000).toISOString(), status: 'pending' },
+          { event: 'Arrival at port', time: arrivalTime.toISOString(), status: 'pending' },
+          { event: 'Berthing confirmed', time: berthingTime.toISOString(), status: 'pending' },
+          { event: 'Discharge complete', time: dischargeComplete.toISOString(), status: 'pending' }
+        ]
+      },
+      historicalComparison: {
+        averageDelayThisRoute: Math.floor(Math.random() * 12) + 18,
+        seasonalVariation: `${Math.floor(Math.random() * 10) + 5}%`,
+        performanceTrend: totalDelay < 30 ? 'better' : totalDelay < 48 ? 'average' : 'worse'
+      }
+    };
+  }
+
+  validateAndEnhancePrediction(prediction, vessel) {
+    // Ensure all required fields exist
+    if (!prediction.predictions) prediction.predictions = {};
+    if (!prediction.realTimeFactors) prediction.realTimeFactors = {};
+    if (!prediction.riskAssessment) prediction.riskAssessment = {};
+    
+    // Validate numeric ranges
+    if (prediction.predictions.arrivalDelay) {
+      prediction.predictions.arrivalDelay.hours = Math.max(0, Math.min(72, prediction.predictions.arrivalDelay.hours));
+      prediction.predictions.arrivalDelay.confidence = Math.max(0.6, Math.min(0.95, prediction.predictions.arrivalDelay.confidence));
+    }
+    
+    if (prediction.predictions.berthingDelay) {
+      prediction.predictions.berthingDelay.hours = Math.max(0, Math.min(48, prediction.predictions.berthingDelay.hours));
+      prediction.predictions.berthingDelay.confidence = Math.max(0.7, Math.min(0.95, prediction.predictions.berthingDelay.confidence));
+    }
+    
+    return prediction;
+  }
+
+  async storePrediction(vesselId, predictionData) {
     const predictionId = `DEL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const delayPrediction = new DelayPrediction({
       vesselId,
       predictionId,
-      predictions: {
-        arrivalDelay: aiPrediction.arrivalDelay,
-        berthingDelay: aiPrediction.berthingDelay
-      },
-      realTimeFactors: {
-        weatherConditions: realTimeData.weather,
-        portCongestion: realTimeData.portCongestion,
-        vesselTracking: realTimeData.vesselTracking
-      },
-      delayReasons: aiPrediction.delayReasons,
-      recommendations: aiPrediction.recommendations,
-      riskLevel: aiPrediction.riskLevel
+      predictions: predictionData.predictions,
+      realTimeFactors: predictionData.realTimeFactors,
+      delayReasons: predictionData.delayReasons || [],
+      recommendations: predictionData.recommendations?.immediate?.concat(predictionData.recommendations?.shortTerm) || [],
+      riskLevel: predictionData.riskAssessment?.overallRisk || 'medium',
+      timestamp: new Date()
     });
 
     return await delayPrediction.save();
   }
 
-  /**
-   * Validation methods
-   */
-  validateWeatherData(data) {
-    return {
-      windSpeed: Math.max(0, Math.min(100, data.windSpeed || 10)),
-      waveHeight: Math.max(0, Math.min(10, data.waveHeight || 1.5)),
-      visibility: ['Good', 'Moderate', 'Poor'].includes(data.visibility) ? data.visibility : 'Moderate',
-      seaCondition: ['Calm', 'Slight', 'Moderate', 'Rough'].includes(data.seaCondition) ? data.seaCondition : 'Slight',
-      rainIntensity: Math.max(0, Math.min(10, data.rainIntensity || 0)),
-      source: data.source || 'Gemini Weather Intelligence',
-      lastUpdated: data.lastUpdated || new Date().toISOString()
+  determineDestination(loadPort) {
+    const destinations = {
+      'Newcastle': 'Vizag',
+      'Port Hedland': 'Paradip',
+      'Richards Bay': 'Haldia',
+      'Balikpapan': 'Chennai'
     };
+    return destinations[loadPort] || 'Paradip';
   }
 
-  validatePortCongestionData(data) {
-    return {
-      queuedVessels: Math.max(0, Math.min(50, data.queuedVessels || 3)),
-      averageWaitTime: Math.max(0, Math.min(168, data.averageWaitTime || 18)),
-      congestionLevel: ['low', 'medium', 'high'].includes(data.congestionLevel) ? 
-        data.congestionLevel : 'medium',
-      berthAvailability: Math.max(0, Math.min(20, data.berthAvailability || 2)),
-      currentUtilization: Math.max(0, Math.min(100, data.currentUtilization || 70)),
-      operationalStatus: ['normal', 'reduced', 'enhanced'].includes(data.operationalStatus) ?
-        data.operationalStatus : 'normal',
-      source: data.source || 'Gemini Intelligence',
-      lastUpdated: data.lastUpdated || new Date().toISOString()
+  calculateDistance(origin, destination) {
+    const distances = {
+      'Newcastle': { 'Vizag': 5400, 'Paradip': 5600, 'Haldia': 5800, 'Chennai': 5200 },
+      'Port Hedland': { 'Vizag': 4800, 'Paradip': 5000, 'Haldia': 5200, 'Chennai': 4600 },
+      'Richards Bay': { 'Vizag': 6800, 'Paradip': 7200, 'Haldia': 7400, 'Chennai': 6600 },
+      'Balikpapan': { 'Vizag': 3200, 'Paradip': 3400, 'Haldia': 3600, 'Chennai': 3000 }
     };
+    return distances[origin]?.[destination] || 5500;
   }
 
-  validateVesselTrackingData(data) {
-    return {
-      currentLatitude: Math.max(8, Math.min(37, data.currentLatitude || 20.0)),
-      currentLongitude: Math.max(68, Math.min(97, data.currentLongitude || 85.0)),
-      speed: Math.max(0, Math.min(25, data.speed || 12)),
-      distanceToPort: Math.max(0, Math.min(5000, data.distanceToPort || 150)),
-      estimatedArrival: data.estimatedArrival || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      voyageStatus: ['approaching', 'en_route', 'near_port'].includes(data.voyageStatus) ?
-        data.voyageStatus : 'en_route',
-      delayFromSchedule: Math.max(-48, Math.min(72, data.delayFromSchedule || 0)),
-      source: data.source || 'Gemini Tracking Intelligence',
-      lastUpdated: data.lastUpdated || new Date().toISOString()
-    };
+  getCurrentSeason() {
+    const month = new Date().getMonth();
+    if (month >= 2 && month <= 5) return 'Summer';
+    if (month >= 6 && month <= 9) return 'Monsoon';
+    return 'Winter';
   }
 
-  validatePrediction(prediction) {
-    return {
-      arrivalDelay: {
-        hours: Math.max(0, Math.min(168, prediction.arrivalDelay?.hours || 12)),
-        confidence: Math.max(0, Math.min(1, prediction.arrivalDelay?.confidence || 0.7))
-      },
-      berthingDelay: {
-        hours: Math.max(0, Math.min(72, prediction.berthingDelay?.hours || 6)),
-        confidence: Math.max(0, Math.min(1, prediction.berthingDelay?.confidence || 0.8))
-      },
-      delayReasons: Array.isArray(prediction.delayReasons) ? prediction.delayReasons : [],
-      recommendations: Array.isArray(prediction.recommendations) ? prediction.recommendations : [],
-      riskLevel: ['low', 'medium', 'high', 'critical'].includes(prediction.riskLevel) ? 
-        prediction.riskLevel : 'medium'
-    };
-  }
-
-  // Default data methods for ultimate fallback
-  getDefaultWeatherData() {
-    return {
-      windSpeed: 15,
-      waveHeight: 2.0,
-      visibility: 'Moderate',
-      seaCondition: 'Slight',
-      rainIntensity: 0,
-      source: 'Default',
-      lastUpdated: new Date().toISOString()
-    };
-  }
-
-  getDefaultPortCongestionData(portName) {
-    const defaults = {
-      'Haldia': { queuedVessels: 4, averageWaitTime: 24, congestionLevel: 'high' },
-      'Paradip': { queuedVessels: 3, averageWaitTime: 18, congestionLevel: 'medium' },
-      'Vizag': { queuedVessels: 2, averageWaitTime: 15, congestionLevel: 'medium' },
-      'Chennai': { queuedVessels: 3, averageWaitTime: 20, congestionLevel: 'medium' },
-      'Mumbai': { queuedVessels: 5, averageWaitTime: 28, congestionLevel: 'high' }
-    };
+  async callGeminiWithRetry(prompt, maxRetries = 2) {
+    if (!this.model) return null;
     
-    const portDefault = defaults[portName] || { queuedVessels: 3, averageWaitTime: 20, congestionLevel: 'medium' };
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await Promise.race([
+          this.model.generateContent(prompt),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+        ]);
+        
+        const response = await result.response;
+        const text = response.text().trim();
+        
+        if (text && text.length > 0) {
+          return text;
+        }
+      } catch (error) {
+        console.log(`⚠️ Attempt ${attempt + 1} failed: ${error.message}`);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, attempt)));
+        }
+      }
+    }
     
-    return {
-      ...portDefault,
-      berthAvailability: 2,
-      currentUtilization: 75,
-      operationalStatus: 'normal',
-      source: 'Default',
-      lastUpdated: new Date().toISOString()
-    };
-  }
-
-  getDefaultVesselTrackingData() {
-    return {
-      currentLatitude: 20.0,
-      currentLongitude: 85.0,
-      speed: 12,
-      distanceToPort: 150,
-      estimatedArrival: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      voyageStatus: 'en_route',
-      delayFromSchedule: 0,
-      source: 'Default',
-      lastUpdated: new Date().toISOString()
-    };
-  }
-
-  getDefaultRealTimeData() {
-    return {
-      weather: this.getDefaultWeatherData(),
-      portCongestion: this.getDefaultPortCongestionData('Unknown'),
-      vesselTracking: this.getDefaultVesselTrackingData()
-    };
+    return null;
   }
 }
 

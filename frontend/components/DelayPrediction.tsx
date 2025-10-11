@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Alert, AlertDescription } from "./ui/alert"
 import { Badge } from "./ui/badge"
+import { Progress } from "./ui/progress"
 import { Skeleton } from "./ui/skeleton"
 import {
   Cloud,
@@ -19,54 +20,16 @@ import {
   Users,
   MapPin,
   Navigation,
-  Calendar,
-  TrendingUp,
   Lightbulb,
+  DollarSign,
+  Package,
+  Target,
+  Activity,
+  Timer,
+  BarChart3,
+  AlertCircle,
+  CheckCheck,
 } from "lucide-react"
-
-// Type definitions for the component
-interface DelayPredictionResponse {
-  success: boolean
-  data: DelayPredictionData
-  error?: string
-}
-
-interface DelayPredictionData {
-  predictions?: {
-    arrivalDelay?: {
-      hours: number
-      confidence: number
-    }
-    berthingDelay?: {
-      hours: number
-      confidence: number
-    }
-  }
-  riskLevel?: string
-  realTimeFactors?: {
-    weatherConditions?: {
-      windSpeed: string
-      waveHeight: string
-      visibility: string
-    }
-    portCongestion?: {
-      queuedVessels: string
-      averageWaitTime: string
-      berthAvailability: string
-    }
-    vesselTracking?: {
-      speed: string
-      distanceToPort: string
-      estimatedArrival: string
-    }
-  }
-  delayReasons?: Array<{
-    factor: string
-    impact: string
-    severity?: string
-  }>
-  recommendations?: string[]
-}
 
 interface DelayPredictionProps {
   vesselId: string
@@ -76,43 +39,37 @@ interface DelayPredictionProps {
 const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadComplete }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [predictionData, setPredictionData] = useState<DelayPredictionData | null>(null)
+  const [predictionData, setPredictionData] = useState<any>(null)
+  const [vesselName, setVesselName] = useState<string>("")
 
   useEffect(() => {
     const fetchPredictionData = async () => {
-      console.log("Fetching prediction data for vesselId:", vesselId)
       try {
-        // First try to get prediction history
-        console.log("Attempting to fetch prediction history...")
+        // Fetch vessel name first
+        const vesselResponse = await fetch(`http://localhost:5000/api/vessels/${vesselId}`)
+        const vesselData = await vesselResponse.json()
+        if (vesselData.success) {
+          setVesselName(vesselData.data.name)
+        }
+
         let response = await fetch(`http://localhost:5000/api/delay/history/${vesselId}`)
         let data = await response.json()
-        console.log("History response:", data)
 
         if (data.success && data.data && Array.isArray(data.data) && data.data.length > 0) {
-          // Get the most recent prediction from history
-          const mostRecentPrediction = data.data[0] // Assuming sorted by timestamp descending
-          console.log("Using most recent prediction:", mostRecentPrediction)
-          setPredictionData(mostRecentPrediction)
+          setPredictionData(data.data[0])
           onLoadComplete()
         } else {
-          // If no history found, request new prediction
-          console.log("No history found, requesting new prediction...")
-          response = await fetch(`http://localhost:5000/api/delay/predict/${vesselId}`, {
-            method: "POST",
-          })
+          response = await fetch(`http://localhost:5000/api/delay/predict/${vesselId}`, { method: "POST" })
           data = await response.json()
-          console.log("New prediction response:", data)
 
           if (!data.success) {
             throw new Error(data.error || "Failed to fetch prediction data")
           }
 
-          console.log("Setting prediction data:", data.data)
           setPredictionData(data.data)
           onLoadComplete()
         }
       } catch (err) {
-        console.error("Error fetching prediction data:", err)
         setError(err instanceof Error ? err.message : "An error occurred")
       } finally {
         setLoading(false)
@@ -122,19 +79,11 @@ const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadCompl
     fetchPredictionData()
   }, [vesselId, onLoadComplete])
 
-  // Log component state
-  console.log("Component State:", {
-    loading,
-    error,
-    predictionData,
-    vesselId,
-  })
-
   if (loading) {
     return (
       <div className="grid gap-8 animate-pulse">
         {/* Main Prediction Card Skeleton */}
-        <Card className="overflow-hidden border-0 shadow-lg rounded-2xl">
+        <Card className="overflow-hidden border shadow-lg rounded-2xl">
           <CardHeader className="pb-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-3">
@@ -165,7 +114,7 @@ const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadCompl
         {/* Real-time factors skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="border-0 shadow-lg rounded-2xl">
+            <Card key={i} className="border shadow-lg rounded-2xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-10 w-10 rounded-xl" />
@@ -189,7 +138,7 @@ const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadCompl
         {/* Bottom section skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {[1, 2].map((i) => (
-            <Card key={i} className="border-0 shadow-lg rounded-2xl">
+            <Card key={i} className="border shadow-lg rounded-2xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-10 w-10 rounded-xl" />
@@ -215,7 +164,7 @@ const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadCompl
 
   if (error) {
     return (
-      <Alert variant="destructive" className="border-0 shadow-lg rounded-2xl bg-red-50 border-red-200">
+      <Alert variant="destructive" className="border shadow-lg rounded-2xl bg-red-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
             <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -227,9 +176,8 @@ const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadCompl
   }
 
   if (!predictionData) {
-    console.log("No prediction data available")
     return (
-      <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+      <Card className="border shadow-lg rounded-2xl bg-white">
         <CardContent className="flex items-center justify-center py-16">
           <div className="text-center space-y-4">
             <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto">
@@ -245,350 +193,503 @@ const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadCompl
     )
   }
 
-  const getRiskVariant = (risk: string): "default" | "destructive" | "secondary" | "outline" => {
-    const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
-      low: "default",
-      medium: "secondary",
-      high: "destructive",
-      critical: "destructive",
-    }
-    return variants[risk] || "outline"
-  }
+  const predictions = predictionData.predictions || {}
+  const realTimeFactors = predictionData.realTimeFactors || {}
+  const riskLevel = predictionData.riskLevel || "medium"
 
-  const getRiskIcon = (risk: string) => {
-    const icons = {
-      low: <CheckCircle className="h-4 w-4" />,
-      medium: <Clock className="h-4 w-4" />,
-      high: <AlertTriangle className="h-4 w-4" />,
-      critical: <AlertTriangle className="h-4 w-4" />,
-    }
-    return icons[risk as keyof typeof icons] || <Clock className="h-4 w-4" />
-  }
+  const totalDelay = (predictions.arrivalDelay?.hours || 0) + (predictions.berthingDelay?.hours || 0)
+  const avgConfidence = ((predictions.arrivalDelay?.confidence || 0) + (predictions.berthingDelay?.confidence || 0)) / 2
+  const costImpact = predictions.totalDelayImpact?.costImpact || 0
 
   const getRiskColor = (risk: string) => {
     const colors = {
-      low: "from-emerald-50 to-emerald-100 border-emerald-200",
-      medium: "from-yellow-50 to-yellow-100 border-yellow-200",
-      high: "from-red-50 to-red-100 border-red-200",
-      critical: "from-red-50 to-red-100 border-red-200",
+      low: { bg: "bg-emerald-50", border: "border-emerald-300", text: "text-emerald-700", badgeBg: "bg-emerald-100" },
+      medium: { bg: "bg-yellow-50", border: "border-yellow-300", text: "text-yellow-700", badgeBg: "bg-yellow-100" },
+      high: { bg: "bg-orange-50", border: "border-orange-300", text: "text-orange-700", badgeBg: "bg-orange-100" },
+      critical: { bg: "bg-red-50", border: "border-red-300", text: "text-red-700", badgeBg: "bg-red-100" },
     }
-    return colors[risk as keyof typeof colors] || "from-slate-50 to-slate-100 border-slate-200"
+    return colors[risk as keyof typeof colors] || colors.medium
   }
 
-  return (
-    <div className="grid gap-8">
-      {/* Main Prediction Card */}
-      <Card
-        className={`relative overflow-hidden border-0 shadow-xl rounded-2xl bg-gradient-to-br ${getRiskColor(predictionData?.riskLevel || "low")}`}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-        <CardHeader className="relative pb-4">
-          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/80 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-sm">
-                <TrendingUp className="h-7 w-7 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Delay Prediction Analysis</h2>
-                <p className="text-slate-600 font-medium">Real-time vessel delay assessment</p>
-              </div>
-            </div>
-            {predictionData?.riskLevel && (
-              <Badge
-                variant={getRiskVariant(predictionData.riskLevel)}
-                className="gap-2 font-bold text-sm px-4 py-2 shadow-sm"
-              >
-                {getRiskIcon(predictionData.riskLevel)}
-                {predictionData.riskLevel.toUpperCase()} RISK
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="relative">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="group space-y-4 p-6 rounded-2xl bg-white/80 backdrop-blur-sm border border-white/50 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Anchor className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="font-bold text-xl text-slate-800">Arrival Delay</h3>
-              </div>
-              <div className="space-y-3">
-                <p className="text-5xl font-bold text-blue-600">
-                  {predictionData?.predictions?.arrivalDelay?.hours ?? 0}
-                  <span className="text-2xl text-slate-500 ml-2">hours</span>
-                </p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-600">Confidence Level</span>
-                    <span className="text-sm font-bold text-slate-800">
-                      {((predictionData?.predictions?.arrivalDelay?.confidence ?? 0) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${(predictionData?.predictions?.arrivalDelay?.confidence ?? 0) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+  const riskColors = getRiskColor(riskLevel)
 
-            <div className="group space-y-4 p-6 rounded-2xl bg-white/80 backdrop-blur-sm border border-white/50 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                  <MapPin className="h-6 w-6 text-emerald-600" />
+  return (
+    <div className="grid gap-6">
+      {/* Hero Card with Key Metrics */}
+      <Card className={`border-2 ${riskColors.border} shadow-xl rounded-2xl ${riskColors.bg}`}>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-md">
+                  <Activity className="h-8 w-8 text-blue-600" />
                 </div>
-                <h3 className="font-bold text-xl text-slate-800">Berthing Delay</h3>
-              </div>
-              <div className="space-y-3">
-                <p className="text-5xl font-bold text-emerald-600">
-                  {predictionData?.predictions?.berthingDelay?.hours ?? 0}
-                  <span className="text-2xl text-slate-500 ml-2">hours</span>
-                </p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-600">Confidence Level</span>
-                    <span className="text-sm font-bold text-slate-800">
-                      {((predictionData?.predictions?.berthingDelay?.confidence ?? 0) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-1000 ease-out delay-300"
-                      style={{ width: `${(predictionData?.predictions?.berthingDelay?.confidence ?? 0) * 100}%` }}
-                    />
-                  </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-slate-900">Delay Prediction Analysis</h2>
+                  <p className="text-slate-700 font-medium mt-1">Comprehensive vessel delay assessment</p>
                 </div>
               </div>
+              <Badge
+                className={`${riskColors.text} ${riskColors.badgeBg} border-2 ${riskColors.border} px-6 py-3 text-lg font-bold shadow-sm`}
+              >
+                <AlertTriangle className="w-5 h-5 mr-2" />
+                {riskLevel.toUpperCase()} RISK
+              </Badge>
             </div>
+            {vesselName && (
+  <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border-2 border-slate-200 w-fit shadow-sm">
+    <Ship className="h-5 w-5 text-blue-600" />
+    <span className="text-sm font-semibold text-slate-700">Vessel:</span>
+    <span className="text-sm font-bold text-slate-900">{vesselName}</span>
+    <span className="text-xs text-slate-500 ml-2">ID: {vesselId}</span>
+  </div>
+)}
+
           </div>
-        </CardContent>
+        </CardHeader>
+        <CardContent>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="bg-white rounded-xl p-5 border-2 border-slate-200 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <Timer className="h-5 w-5 text-blue-600" />
+        <span className="text-sm font-semibold text-slate-600">Total Delay</span>
+      </div>
+      <p className="text-4xl font-bold text-blue-600 mb-1">{totalDelay}h</p>
+      <p className="text-xs text-slate-500">Combined delay estimate</p>
+    </div>
+
+    <div className="bg-white rounded-xl p-5 border-2 border-slate-200 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <Target className="h-5 w-5 text-green-600" />
+        <span className="text-sm font-semibold text-slate-600">Confidence</span>
+      </div>
+      <p className="text-4xl font-bold text-green-600 mb-1">
+        {(avgConfidence * 100).toFixed(0)}%
+      </p>
+      <Progress value={avgConfidence * 100} className="h-2 mt-2" />
+    </div>
+
+    <div className="bg-white rounded-xl p-5 border-2 border-slate-200 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <BarChart3 className="h-5 w-5 text-purple-600" />
+        <span className="text-sm font-semibold text-slate-600">Risk Score</span>
+      </div>
+      <p className="text-4xl font-bold text-purple-600 mb-1">
+        {Math.min(100, Math.round((totalDelay / 72) * 100))}
+      </p>
+      <Progress
+        value={Math.min(100, (totalDelay / 72) * 100)}
+        className="h-2 mt-2"
+      />
+    </div>
+  </div>
+</CardContent>
+
       </Card>
 
-      {/* Real-Time Factors */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Weather */}
-        <Card className="group border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent" />
-          <CardHeader className="relative pb-3">
-            <CardTitle className="text-lg flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Cloud className="h-6 w-6 text-blue-600" />
+      {/* Delay Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-2 border-blue-200 shadow-lg rounded-2xl bg-blue-50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center border-2 border-blue-200">
+                <Anchor className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-800">Weather Conditions</h3>
-                <p className="text-sm text-slate-600 font-medium">Current maritime weather</p>
+                <h3 className="text-xl font-bold text-slate-800">Arrival Delay</h3>
+                <p className="text-sm text-slate-600 font-medium">Port arrival delay estimate</p>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Wind className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Wind Speed</span>
+          <CardContent className="space-y-6">
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <p className="text-6xl font-bold text-blue-600 mb-2">
+                  {predictions.arrivalDelay?.hours || 0}
+                  <span className="text-2xl text-slate-500 ml-2">hours</span>
+                </p>
+                <div className="space-y-2 mt-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-slate-600">Confidence Level</span>
+                    <span className="font-bold text-slate-800">
+                      {((predictions.arrivalDelay?.confidence || 0) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress value={(predictions.arrivalDelay?.confidence || 0) * 100} className="h-3" />
+                </div>
               </div>
-              <span className="font-bold text-slate-800">
-                {predictionData.realTimeFactors?.weatherConditions?.windSpeed ?? "N/A"}
-              </span>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Waves className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Wave Height</span>
+
+            {predictions.arrivalDelay?.factors && predictions.arrivalDelay.factors.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-700">Contributing Factors:</p>
+                <div className="space-y-2">
+                  {predictions.arrivalDelay.factors.map((factor: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 p-3 bg-white rounded-lg border-2 border-blue-200 shadow-sm"
+                    >
+                      <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      <span className="text-sm text-slate-700">{factor}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <span className="font-bold text-slate-800">
-                {predictionData.realTimeFactors?.weatherConditions?.waveHeight ?? "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Eye className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Visibility</span>
-              </div>
-              <span className="font-bold text-slate-800">
-                {predictionData.realTimeFactors?.weatherConditions?.visibility ?? "N/A"}
-              </span>
-            </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Port Congestion */}
-        <Card className="group border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-transparent" />
-          <CardHeader className="relative pb-3">
-            <CardTitle className="text-lg flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <Anchor className="h-6 w-6 text-orange-600" />
+        <Card className="border-2 border-green-200 shadow-lg rounded-2xl bg-green-50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center border-2 border-green-200">
+                <MapPin className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-800">Port Congestion</h3>
-                <p className="text-sm text-slate-600 font-medium">Current port traffic status</p>
+                <h3 className="text-xl font-bold text-slate-800">Berthing Delay</h3>
+                <p className="text-sm text-slate-600 font-medium">Port berthing delay estimate</p>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Queued Vessels</span>
+          <CardContent className="space-y-6">
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <p className="text-6xl font-bold text-green-600 mb-2">
+                  {predictions.berthingDelay?.hours || 0}
+                  <span className="text-2xl text-slate-500 ml-2">hours</span>
+                </p>
+                <div className="space-y-2 mt-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-slate-600">Confidence Level</span>
+                    <span className="font-bold text-slate-800">
+                      {((predictions.berthingDelay?.confidence || 0) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress value={(predictions.berthingDelay?.confidence || 0) * 100} className="h-3" />
+                </div>
               </div>
-              <span className="font-bold text-slate-800">
-                {predictionData.realTimeFactors?.portCongestion?.queuedVessels ?? "N/A"}
-              </span>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Average Wait</span>
-              </div>
-              <span className="font-bold text-slate-800">
-                {predictionData.realTimeFactors?.portCongestion?.averageWaitTime ?? "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Available Berths</span>
-              </div>
-              <span className="font-bold text-slate-800">
-                {predictionData.realTimeFactors?.portCongestion?.berthAvailability ?? "N/A"}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Vessel Tracking */}
-        <Card className="group border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm overflow-hidden md:col-span-2 lg:col-span-1">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent" />
-          <CardHeader className="relative pb-3">
-            <CardTitle className="text-lg flex items-center gap-3">
-              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                <Ship className="h-6 w-6 text-emerald-600" />
+            {predictions.berthingDelay?.factors && predictions.berthingDelay.factors.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-700">Contributing Factors:</p>
+                <div className="space-y-2">
+                  {predictions.berthingDelay.factors.map((factor: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 p-3 bg-white rounded-lg border-2 border-green-200 shadow-sm"
+                    >
+                      <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <span className="text-sm text-slate-700">{factor}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-slate-800">Vessel Tracking</h3>
-                <p className="text-sm text-slate-600 font-medium">Real-time vessel position</p>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Navigation className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Current Speed</span>
-              </div>
-              <span className="font-bold text-slate-800">
-                {predictionData?.realTimeFactors?.vesselTracking?.speed ?? "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">Distance to Port</span>
-              </div>
-              <span className="font-bold text-slate-800">
-                {predictionData?.realTimeFactors?.vesselTracking?.distanceToPort ?? "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/80 border border-slate-100">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-slate-500" />
-                <span className="font-semibold text-slate-700">ETA</span>
-              </div>
-              <span className="font-bold text-slate-800 text-sm">
-                {predictionData?.realTimeFactors?.vesselTracking?.estimatedArrival
-                  ? new Date(predictionData.realTimeFactors.vesselTracking.estimatedArrival).toLocaleString()
-                  : "N/A"}
-              </span>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Delay Reasons and Recommendations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 to-transparent" />
-          <CardHeader className="relative pb-4">
-            <CardTitle className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+      {/* Real-Time Conditions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Weather Conditions */}
+        <Card className="border-2 border-blue-200 shadow-lg rounded-2xl bg-white">
+          <CardHeader className="pb-3 bg-blue-50 rounded-t-2xl">
+            <CardTitle className="text-lg flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center border-2 border-blue-200">
+                <Cloud className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-slate-800">Delay Factors</h3>
-                <p className="text-slate-600 font-medium">Identified risk factors</p>
+                <h3 className="font-bold text-slate-800">Weather</h3>
+                <p className="text-xs text-slate-600">Current conditions</p>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative">
-            <div className="space-y-4">
-              {predictionData.delayReasons?.map((reason, index) => (
+          <CardContent className="space-y-3 pt-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Wind className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Wind</span>
+              </div>
+              <span className="font-bold text-slate-800">
+                {realTimeFactors.weatherConditions?.windSpeed || "N/A"} km/h
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Waves className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Waves</span>
+              </div>
+              <span className="font-bold text-slate-800">
+                {realTimeFactors.weatherConditions?.waveHeight || "N/A"}m
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Visibility</span>
+              </div>
+              <Badge variant="outline" className="bg-white border-slate-300">
+                {realTimeFactors.weatherConditions?.visibility || "N/A"}
+              </Badge>
+            </div>
+            {realTimeFactors.weatherConditions?.weatherScore !== undefined && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-semibold text-blue-700">Weather Score</span>
+                  <span className="text-sm font-bold text-blue-800">
+                    {realTimeFactors.weatherConditions.weatherScore}/100
+                  </span>
+                </div>
+                <Progress value={realTimeFactors.weatherConditions.weatherScore} className="h-2" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Port Congestion */}
+        <Card className="border-2 border-orange-200 shadow-lg rounded-2xl bg-white">
+          <CardHeader className="pb-3 bg-orange-50 rounded-t-2xl">
+            <CardTitle className="text-lg flex items-center gap-3">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center border-2 border-orange-200">
+                <Anchor className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800">Port Status</h3>
+                <p className="text-xs text-slate-600">Congestion level</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Queue</span>
+              </div>
+              <span className="font-bold text-slate-800">
+                {realTimeFactors.portCongestion?.queuedVessels || 0} vessels
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Wait Time</span>
+              </div>
+              <span className="font-bold text-slate-800">{realTimeFactors.portCongestion?.averageWaitTime || 0}h</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Berths</span>
+              </div>
+              <Badge variant="outline" className="bg-white border-slate-300">
+                {realTimeFactors.portCongestion?.berthAvailability || 0} available
+              </Badge>
+            </div>
+            {realTimeFactors.portCongestion?.congestionScore !== undefined && (
+              <div className="mt-4 p-3 bg-orange-50 rounded-lg border-2 border-orange-200">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-semibold text-orange-700">Congestion Score</span>
+                  <span className="text-sm font-bold text-orange-800">
+                    {realTimeFactors.portCongestion.congestionScore}/100
+                  </span>
+                </div>
+                <Progress value={realTimeFactors.portCongestion.congestionScore} className="h-2" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Vessel Tracking */}
+        <Card className="border-2 border-green-200 shadow-lg rounded-2xl bg-white">
+          <CardHeader className="pb-3 bg-green-50 rounded-t-2xl">
+            <CardTitle className="text-lg flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center border-2 border-green-200">
+                <Ship className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800">Vessel Status</h3>
+                <p className="text-xs text-slate-600">Current position</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Navigation className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Speed</span>
+              </div>
+              <span className="font-bold text-slate-800">{realTimeFactors.vesselTracking?.speed || 0} knots</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Distance</span>
+              </div>
+              <span className="font-bold text-slate-800">{realTimeFactors.vesselTracking?.distanceToPort || 0} km</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-semibold text-slate-700">Status</span>
+              </div>
+              <Badge variant="outline" className="bg-white border-slate-300 capitalize">
+                {realTimeFactors.vesselTracking?.voyageStatus || "N/A"}
+              </Badge>
+            </div>
+            {realTimeFactors.vesselTracking?.completionPercentage !== undefined && (
+              <div className="mt-4 p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-semibold text-green-700">Voyage Progress</span>
+                  <span className="text-sm font-bold text-green-800">
+                    {realTimeFactors.vesselTracking.completionPercentage}%
+                  </span>
+                </div>
+                <Progress value={realTimeFactors.vesselTracking.completionPercentage} className="h-2" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Operational Factors */}
+      {realTimeFactors.operationalFactors && (
+        <Card className="border-2 border-purple-200 shadow-lg rounded-2xl bg-white">
+          <CardHeader className="bg-purple-50 rounded-t-2xl">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center border-2 border-purple-200">
+                <Package className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Operational Readiness</h3>
+                <p className="text-sm text-slate-600">Cargo and crew status</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 bg-purple-50 rounded-xl border-2 border-purple-200">
+                <p className="text-sm font-semibold text-slate-600 mb-2">Cargo Complexity</p>
+                <Badge className="bg-purple-100 text-purple-800 capitalize border-purple-300">
+                  {realTimeFactors.operationalFactors.cargoComplexity}
+                </Badge>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+                <p className="text-sm font-semibold text-slate-600 mb-2">Discharge Time</p>
+                <p className="text-2xl font-bold text-blue-700">{realTimeFactors.operationalFactors.dischargeTime}h</p>
+              </div>
+              <div className="p-4 bg-green-50 rounded-xl border-2 border-green-200">
+                <p className="text-sm font-semibold text-slate-600 mb-2">Crew Readiness</p>
+                <div className="flex items-center gap-2">
+                  <Progress value={realTimeFactors.operationalFactors.crewReadiness} className="h-2 flex-1" />
+                  <span className="text-sm font-bold text-green-700">
+                    {realTimeFactors.operationalFactors.crewReadiness}%
+                  </span>
+                </div>
+              </div>
+              <div className="p-4 bg-orange-50 rounded-xl border-2 border-orange-200">
+                <p className="text-sm font-semibold text-slate-600 mb-2">Equipment</p>
+                <div className="flex items-center gap-2">
+                  <Progress value={realTimeFactors.operationalFactors.equipmentAvailability} className="h-2 flex-1" />
+                  <span className="text-sm font-bold text-orange-700">
+                    {realTimeFactors.operationalFactors.equipmentAvailability}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Delay Factors and Recommendations */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-2 border-red-200 shadow-lg rounded-2xl bg-white">
+          <CardHeader className="bg-red-50 rounded-t-2xl">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center border-2 border-red-200">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Delay Factors</h3>
+                <p className="text-sm text-slate-600">Identified risk contributors</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              {predictionData.delayReasons?.map((reason: any, index: number) => (
                 <div
                   key={index}
-                  className="group p-5 rounded-xl border border-slate-200 bg-white/80 backdrop-blur-sm shadow-sm"
+                  className="p-4 rounded-xl border-2 border-slate-200 bg-slate-50 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1">
-                      <h4 className="font-bold text-lg text-slate-800 mb-2">{reason.factor}</h4>
-                      <p className="text-slate-600 leading-relaxed">{reason.impact}</p>
-                    </div>
-                    {reason.severity && (
-                      <Badge variant={getRiskVariant(reason.severity)} className="text-xs gap-1 shrink-0 font-semibold">
-                        {getRiskIcon(reason.severity)}
-                        {reason.severity.toUpperCase()}
+                  <div className="flex justify-between items-start gap-3 mb-2">
+                    <h4 className="font-bold text-slate-800 flex-1">{reason.factor}</h4>
+                    <div className="flex flex-col gap-2">
+                      <Badge
+                        variant={
+                          reason.severity === "high"
+                            ? "destructive"
+                            : reason.severity === "medium"
+                              ? "secondary"
+                              : "default"
+                        }
+                        className="text-xs"
+                      >
+                        {reason.severity?.toUpperCase()}
                       </Badge>
-                    )}
+                      {reason.probability && (
+                        <div className="text-xs text-slate-600 text-right">{reason.probability}% likely</div>
+                      )}
+                    </div>
                   </div>
+                  <p className="text-sm text-slate-600 mb-2">{reason.impact}</p>
+                  {reason.mitigationTime && (
+                    <div className="text-xs text-slate-500 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Mitigation: {reason.mitigationTime}
+                    </div>
+                  )}
                 </div>
               ))}
               {(!predictionData.delayReasons || predictionData.delayReasons.length === 0) && (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="h-8 w-8 text-emerald-600" />
-                  </div>
-                  <p className="text-lg font-semibold text-slate-700 mb-1">No Significant Delays</p>
-                  <p className="text-slate-500">No major delay factors have been identified</p>
+                <div className="text-center py-8">
+                  <CheckCheck className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                  <p className="text-slate-600">No significant delay factors identified</p>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-50/30 to-transparent" />
-          <CardHeader className="relative pb-4">
+        <Card className="border-2 border-amber-200 shadow-lg rounded-2xl bg-white">
+          <CardHeader className="bg-amber-50 rounded-t-2xl">
             <CardTitle className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center border-2 border-amber-200">
                 <Lightbulb className="h-6 w-6 text-amber-600" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-slate-800">Recommendations</h3>
-                <p className="text-slate-600 font-medium">Optimization suggestions</p>
+                <p className="text-sm text-slate-600">Action items</p>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative">
-            <div className="space-y-4">
-              {predictionData.recommendations?.map((rec, index) => (
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              {predictionData.recommendations?.map((rec: string, index: number) => (
                 <div
                   key={index}
-                  className="group flex items-start gap-4 p-4 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm"
+                  className="flex items-start gap-3 p-4 rounded-xl bg-green-50 border-2 border-green-200"
                 >
-                  <div className="mt-1 w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  <div className="mt-1 w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 border-2 border-green-300">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
                   </div>
-                  <p className="text-slate-700 leading-relaxed font-medium">{rec}</p>
+                  <p className="text-slate-700 font-medium flex-1">{rec}</p>
                 </div>
               ))}
               {(!predictionData.recommendations || predictionData.recommendations.length === 0) && (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Lightbulb className="h-8 w-8 text-slate-400" />
-                  </div>
-                  <p className="text-lg font-semibold text-slate-700 mb-1">No Recommendations</p>
-                  <p className="text-slate-500">No specific recommendations are available at this time</p>
+                <div className="text-center py-8">
+                  <Lightbulb className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-500">No specific recommendations at this time</p>
                 </div>
               )}
             </div>
