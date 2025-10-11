@@ -13,13 +13,13 @@ const getOptimizationAnalysis = async (req, res) => {
     let optimization = await Optimization.findOne({ vesselId });
     
     if (optimization && optimization.status === 'completed') {
-      console.log(`✅ Returning cached optimization for vessel ${vesselId}`);
+      // console.log(`✅ Returning cached optimization for vessel ${vesselId}`);
       return res.json({ success: true, data: optimization });
     }
     
     // Check if optimization is already in progress
     if (ongoingOptimizations.has(vesselId)) {
-      console.log(`⏳ Optimization already in progress for vessel ${vesselId}`);
+      // console.log(`⏳ Optimization already in progress for vessel ${vesselId}`);
       return res.json({ 
         success: true, 
         data: optimization || { vesselId, status: 'computing' }, 
@@ -67,7 +67,7 @@ const getOptimizationAnalysis = async (req, res) => {
 
 const performOptimizationAsync = async (vesselId, optimizationRecordId) => {
   try {
-    console.log(`🔄 Starting async optimization for vessel ${vesselId}`);
+    // console.log(`🔄 Starting async optimization for vessel ${vesselId}`);
     
     // Call the optimization service with vesselId
     const result = await optimizationService.optimizeVesselOperations(vesselId);
@@ -94,7 +94,7 @@ const performOptimizationAsync = async (vesselId, optimizationRecordId) => {
       computationMetadata: result.computationMetadata
     });
     
-    console.log(`✅ Optimization completed for vessel ${vesselId}`);
+    // console.log(`✅ Optimization completed for vessel ${vesselId}`);
     
   } catch (error) {
     console.error(`❌ Optimization failed for vessel ${vesselId}:`, error);
@@ -123,7 +123,7 @@ const regenerateOptimizationAnalysis = async (req, res) => {
       });
     }
     
-    console.log(`🔄 Regenerating optimization for vessel ${vesselId}`);
+    // console.log(`🔄 Regenerating optimization for vessel ${vesselId}`);
     
     // Delete existing optimization
     await Optimization.findOneAndDelete({ vesselId });

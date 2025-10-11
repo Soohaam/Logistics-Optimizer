@@ -11,7 +11,7 @@ dotenv.config();
 
 const app = express();
 
-console.log("Gemini Key Loaded:", process.env.GEMINI_API_KEY ? "Yes ✅" : "No ❌");
+// console.log("Gemini Key Loaded:", process.env.GEMINI_API_KEY ? "Yes ✅" : "No ❌");
 
 // Middleware
 app.use(cors());

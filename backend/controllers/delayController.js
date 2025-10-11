@@ -10,7 +10,7 @@ class DelayController {
     try {
       const { vesselId } = req.params;
 
-      console.log(`📡 Received delay prediction request for vessel: ${vesselId}`);
+      // console.log(`📡 Received delay prediction request for vessel: ${vesselId}`);
 
       const prediction = await delayPredictionService.predictDelay(vesselId);
 
@@ -36,7 +36,7 @@ class DelayController {
       const { vesselId } = req.params;
       const { limit = 10 } = req.query;
 
-      console.log(`📋 Fetching prediction history for vessel: ${vesselId}`);
+      // console.log(`📋 Fetching prediction history for vessel: ${vesselId}`);
 
       const predictions = await DelayPrediction
         .find({ vesselId })
@@ -64,7 +64,7 @@ class DelayController {
     try {
       const { predictionId } = req.params;
 
-      console.log(`🔍 Fetching prediction: ${predictionId}`);
+      // console.log(`🔍 Fetching prediction: ${predictionId}`);
 
       const prediction = await DelayPrediction.findOne({ predictionId });
 
@@ -95,7 +95,7 @@ class DelayController {
     try {
       const { vesselId } = req.params;
 
-      console.log(`📊 Fetching latest prediction for vessel: ${vesselId}`);
+      // console.log(`📊 Fetching latest prediction for vessel: ${vesselId}`);
 
       const prediction = await DelayPrediction
         .findOne({ vesselId })
@@ -129,7 +129,7 @@ class DelayController {
       const { vesselId } = req.params;
       const { keepLast = 5 } = req.query;
 
-      console.log(`🗑️ Cleaning up old predictions for vessel: ${vesselId}`);
+      // console.log(`🗑️ Cleaning up old predictions for vessel: ${vesselId}`);
 
       // Get all predictions sorted by timestamp
       const predictions = await DelayPrediction

@@ -22,7 +22,7 @@ class OptimizationService {
       this.model = null;
     } else {
       this.initializeModel();
-      console.log(`🔑 Initialized with ${this.apiKeys.length} API key(s)`);
+      // console.log(`🔑 Initialized with ${this.apiKeys.length} API key(s)`);
     }
     
     // Indian ports with realistic coordinates and characteristics
@@ -64,7 +64,7 @@ class OptimizationService {
     const startTime = Date.now();
     
     try {
-      console.log(`🚀 Starting optimization for vessel ID: ${vesselId}`);
+      // console.log(`🚀 Starting optimization for vessel ID: ${vesselId}`);
       
       const vesselData = await this.fetchCompleteVesselData(vesselId);
       
@@ -72,7 +72,7 @@ class OptimizationService {
         throw new Error('Vessel not found');
       }
 
-      console.log(`✅ Fetched data for vessel: ${vesselData.vessel.name}`);
+      // console.log(`✅ Fetched data for vessel: ${vesselData.vessel.name}`);
       
       const optimizationId = `OPT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
@@ -107,7 +107,7 @@ class OptimizationService {
         }
       };
       
-      console.log(`✅ Optimization completed in ${computationTime}ms`);
+      // console.log(`✅ Optimization completed in ${computationTime}ms`);
       
       return optimizationResult;
       
@@ -143,11 +143,11 @@ class OptimizationService {
     const prompt = this.buildOptimizationPrompt(vessel, delayPrediction, portToPlant);
     
     try {
-      console.log('📡 Requesting optimization insights from Gemini AI...');
+      // console.log('📡 Requesting optimization insights from Gemini AI...');
       const response = await this.callGeminiWithRetry(prompt);
       
       if (response) {
-        console.log('✅ Received AI-generated optimization insights');
+        // console.log('✅ Received AI-generated optimization insights');
         const cleanedResponse = response.replace(/```json\n?|\n?```/g, '');
         const aiInsights = JSON.parse(cleanedResponse);
         
@@ -163,7 +163,7 @@ class OptimizationService {
       console.log(`⚠️ AI generation failed, using fallback: ${error.message}`);
     }
     
-    console.log('🔄 Generating fallback optimization insights');
+    // console.log('🔄 Generating fallback optimization insights');
     return this.generateFallbackOptimization(vessel, delayPrediction, portToPlant);
   }
 
@@ -488,11 +488,11 @@ ENSURE optimized values are ALWAYS better (lower costs, less time) than traditio
         const text = response.text().trim();
         
         if (text && text.length > 0) {
-          console.log(`✅ Gemini API success (attempt ${attempt + 1})`);
+          // console.log(`✅ Gemini API success (attempt ${attempt + 1})`);
           return text;
         }
       } catch (error) {
-        console.log(`⚠️ Attempt ${attempt + 1} failed: ${error.message}`);
+        // console.log(`⚠️ Attempt ${attempt + 1} failed: ${error.message}`);
         if (attempt < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, attempt)));
         }

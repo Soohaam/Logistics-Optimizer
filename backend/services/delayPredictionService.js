@@ -53,7 +53,7 @@ class DelayPredictionService {
 
   async predictDelay(vesselId) {
     try {
-      console.log(`🚀 Starting delay prediction for vessel ID: ${vesselId}`);
+      // console.log(`🚀 Starting delay prediction for vessel ID: ${vesselId}`);
       
       // Fetch complete vessel data
       const vessel = await Vessel.findById(vesselId);
@@ -61,7 +61,7 @@ class DelayPredictionService {
         throw new Error('Vessel not found');
       }
 
-      console.log(`✅ Fetched vessel: ${vessel.name}`);
+      // console.log(`✅ Fetched vessel: ${vessel.name}`);
       
       // Generate comprehensive delay prediction
       const predictionData = await this.generateComprehensivePrediction(vessel);
@@ -69,7 +69,7 @@ class DelayPredictionService {
       // Store in database
       const savedPrediction = await this.storePrediction(vesselId, predictionData);
       
-      console.log(`✅ Delay prediction completed for vessel ${vessel.name}`);
+      // console.log(`✅ Delay prediction completed for vessel ${vessel.name}`);
       
       return savedPrediction;
       
@@ -206,7 +206,7 @@ Ensure all data is realistic, internally consistent, and actionable. Consider cu
         return this.validateAndEnhancePrediction(prediction, vessel);
       }
     } catch (error) {
-      console.log(`⚠️ AI prediction failed, using enhanced fallback: ${error.message}`);
+      // console.log(`⚠️ AI prediction failed, using enhanced fallback: ${error.message}`);
     }
     
     return this.generateEnhancedFallback(vessel, destination, distance);
@@ -428,7 +428,7 @@ Ensure all data is realistic, internally consistent, and actionable. Consider cu
           return text;
         }
       } catch (error) {
-        console.log(`⚠️ Attempt ${attempt + 1} failed: ${error.message}`);
+        // console.log(`⚠️ Attempt ${attempt + 1} failed: ${error.message}`);
         if (attempt < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, attempt)));
         }
