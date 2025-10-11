@@ -431,7 +431,9 @@ const VesselManager: React.FC = () => {
   }
 
   // API Base URL
-  const API_BASE_URL = "http://localhost:5000/api/vessels"
+ 
+  const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/vessels`;
+
 
   // Form state
   const [newVessel, setNewVessel] = useState<Vessel>({

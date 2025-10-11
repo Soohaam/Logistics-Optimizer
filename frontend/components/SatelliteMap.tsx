@@ -14,9 +14,99 @@ interface SatelliteMapProps {
   optimizationData?: any;
 }
 
+/**
+ * -------------------------
+ * Types added to fix TS
+ * -------------------------
+ *
+ * The main problem was `number[]` vs `[number, number]` (tuple) for coordinates.
+ * maplibre/maptiler expects a tuple (LngLatLike -> [lng, lat]).
+ *
+ * We define LngLatTuple and typed models so TypeScript knows each coordinates
+ * value is exactly a 2-tuple.
+ */
+
+type LngLatTuple = [number, number];
+
+interface Port {
+  id: string;
+  name: string;
+  coordinates: LngLatTuple;
+  status: 'free' | 'busy' | 'congested';
+  utilization: number;
+  queueLength: number;
+  availableBerths: number;
+  nextVessel?: string;
+  berths?: number;
+  currentVessels?: string[];
+}
+
+interface Plant {
+  id: string;
+  name: string;
+  coordinates: LngLatTuple;
+  currentStock: number;
+  expectedDelivery: string;
+  allocationQuantity: number;
+  shortfall: number;
+  capacity: number;
+  utilizationRate: number;
+}
+
+interface DischargePlanItem {
+  port: string;
+  quantity: number;
+  sequence: number;
+}
+
+interface Vessel {
+  id: string;
+  name: string;
+  coordinates: LngLatTuple;
+  cargoType: string;
+  cargoQuantity: number;
+  eta: string;
+  delayPrediction: { hours: number; confidence: number };
+  currentSpeed: number;
+  assignedPort: string;
+  dischargePlan: DischargePlanItem[];
+  riskLevel: string;
+  recommendations: string[];
+}
+
+interface RailRoute {
+  id: string;
+  name: string;
+  from: LngLatTuple;
+  to: LngLatTuple;
+  distance: number;
+  assignedRakes: number;
+  utilization: number;
+  transitTime: number;
+  cost: number;
+  status: 'active' | 'high-utilization' | 'idle' | string;
+  path: LngLatTuple[];
+}
+
+interface HeatmapPoint {
+  coordinates: LngLatTuple;
+  intensity: number;
+  congestion: string;
+  avgTime: number;
+  avgCost: number;
+}
+
+interface SailData {
+  ports: Port[];
+  plants: Plant[];
+  vessel: Vessel;
+  railRoutes: RailRoute[];
+  heatmapData: HeatmapPoint[];
+}
+
 interface EntityDetails {
   type: 'port' | 'plant' | 'vessel' | 'route';
-  data: any;
+  data: Port | Plant | Vessel | RailRoute | any;
 }
 
 const SatelliteMap: React.FC<SatelliteMapProps> = ({ vesselData, optimizationData }) => {
@@ -26,8 +116,8 @@ const SatelliteMap: React.FC<SatelliteMapProps> = ({ vesselData, optimizationDat
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
 
-  // SAIL Logistics Data
-  const sailData = {
+  // --- typed SAIL Logistics Data --- (annotated as SailData)
+  const sailData: SailData = {
     ports: [
       {
         id: 'visakhapatnam',
@@ -218,7 +308,7 @@ const SatelliteMap: React.FC<SatelliteMapProps> = ({ vesselData, optimizationDat
       maptilersdk.config.apiKey = 'HPOa5Wbsh5rlu6op5CS6';
 
       // Center on eastern India for SAIL operations
-      const center = [85.0, 21.0];
+      const center: LngLatTuple = [85.0, 21.0];
 
       map.current = new maptilersdk.Map({
         container: mapContainer.current,
@@ -248,7 +338,7 @@ const SatelliteMap: React.FC<SatelliteMapProps> = ({ vesselData, optimizationDat
 
     // Add rail routes
     sailData.railRoutes.forEach((route, index) => {
-      const routeColor = route.status === 'active' ? '#3b82f6' : 
+      const routeColor = route.status === 'active' ? '#3b82f6' :
                         route.status === 'high-utilization' ? '#ef4444' : '#9ca3af';
       const routeWidth = route.status === 'high-utilization' ? 4 : 2;
 
@@ -373,7 +463,7 @@ const SatelliteMap: React.FC<SatelliteMapProps> = ({ vesselData, optimizationDat
 
     // Add port markers
     sailData.ports.forEach((port) => {
-      const statusColor = port.status === 'free' ? '#22c55e' : 
+      const statusColor = port.status === 'free' ? '#22c55e' :
                          port.status === 'busy' ? '#eab308' : '#ef4444';
 
       const el = document.createElement('div');
@@ -393,6 +483,7 @@ const SatelliteMap: React.FC<SatelliteMapProps> = ({ vesselData, optimizationDat
         setIsDialogOpen(true);
       });
 
+      // port.coordinates is a LngLatTuple so setLngLat is type-safe
       new maptilersdk.Marker({ element: el })
         .setLngLat(port.coordinates)
         .addTo(map.current!);
@@ -444,7 +535,8 @@ const SatelliteMap: React.FC<SatelliteMapProps> = ({ vesselData, optimizationDat
 
     // Add discharge sequence lines
     if (sailData.vessel.dischargePlan.length > 1) {
-      const dischargeCoordinates: number[][] = [];
+      // make dischargeCoordinates typed as tuple array
+      const dischargeCoordinates: LngLatTuple[] = [];
       sailData.vessel.dischargePlan
         .sort((a, b) => a.sequence - b.sequence)
         .forEach((discharge) => {

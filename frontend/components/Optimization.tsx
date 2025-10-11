@@ -24,7 +24,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     setError(null)
 
     try {
-      const response = await fetch(`http://localhost:5000/api/optimization/vessel/${vesselId}`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/optimization/vessel/${vesselId}`)
       const data = await response.json()
 
       if (!data.success) {
@@ -54,7 +54,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     if (!vesselId) return
 
     try {
-      const response = await fetch(`http://localhost:5000/api/optimization/vessel/${vesselId}/regenerate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/optimization/vessel/${vesselId}/regenerate`, {
         method: "POST",
       })
 
@@ -73,7 +73,7 @@ const Optimization: React.FC<OptimizationProps> = ({ vesselId }) => {
     if (!vesselId) return
 
     try {
-      const response = await fetch(`http://localhost:5000/api/optimization/vessel/${vesselId}/regenerate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/optimization/vessel/${vesselId}/regenerate`, {
         method: "POST",
       })
 

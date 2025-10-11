@@ -156,8 +156,8 @@ const PortToPlant: React.FC<PortToPlantProps> = ({ vesselId, onLoadComplete }) =
       setError(null)
 
       const endpoint = isRegenerate
-        ? `http://localhost:5000/api/port-to-plant/vessel/${vesselId}/regenerate`
-        : `http://localhost:5000/api/port-to-plant/vessel/${vesselId}`
+        ? `${process.env.NEXT_PUBLIC_API_URL}/port-to-plant/vessel/${vesselId}/regenerate`
+        : `${process.env.NEXT_PUBLIC_API_URL}/port-to-plant/vessel/${vesselId}`
 
       const method = isRegenerate ? "POST" : "GET"
 

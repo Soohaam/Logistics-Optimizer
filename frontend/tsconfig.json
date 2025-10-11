@@ -18,14 +18,23 @@
         "name": "next"
       }
     ],
+
+    "baseUrl": ".",
+
     "paths": {
       "@/*": ["./*"],
-      "ui/*": ["components/ui/*"],
-      "components/*": ["components/*"],
-      "lib/*": ["lib/*"],
-      "hooks/*": ["hooks/*"]
+      "ui/*": ["./components/ui/*"],
+      "components/*": ["./components/*"],
+      "lib/*": ["./lib/*"],
+      "hooks/*": ["./hooks/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "types/**/*.d.ts" // ✅ Include custom declaration files
+  ],
   "exclude": ["node_modules"]
 }

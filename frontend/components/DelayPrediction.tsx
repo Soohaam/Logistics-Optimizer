@@ -46,20 +46,20 @@ const DelayPrediction: React.FC<DelayPredictionProps> = ({ vesselId, onLoadCompl
     const fetchPredictionData = async () => {
       try {
         // Fetch vessel name first
-        const vesselResponse = await fetch(`http://localhost:5000/api/vessels/${vesselId}`)
+        const vesselResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vessels/${vesselId}`)
         const vesselData = await vesselResponse.json()
         if (vesselData.success) {
           setVesselName(vesselData.data.name)
         }
 
-        let response = await fetch(`http://localhost:5000/api/delay/history/${vesselId}`)
+        let response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delay/history/${vesselId}`)
         let data = await response.json()
 
         if (data.success && data.data && Array.isArray(data.data) && data.data.length > 0) {
           setPredictionData(data.data[0])
           onLoadComplete()
         } else {
-          response = await fetch(`http://localhost:5000/api/delay/predict/${vesselId}`, { method: "POST" })
+          response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delay/predict/${vesselId}`, { method: "POST" })
           data = await response.json()
 
           if (!data.success) {
