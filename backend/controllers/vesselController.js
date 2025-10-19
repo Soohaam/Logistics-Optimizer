@@ -2,6 +2,8 @@
 const vesselService = require('../services/vesselService');
 const delayPredictionService = require('../services/delayPredictionService');
 const csvUploadService = require('../services/csvUploadService');
+const path = require('path');
+const fs = require('fs');
 
 class VesselController {
   
@@ -117,24 +119,7 @@ class VesselController {
     }
   }
 
-  async downloadTemplate(req, res) {
-    try {
-      const templateContent = [
-        'name,capacity,ETA,laydaysStart,laydaysEnd,loadPort,supplierName,supplierCountry',
-        'Example Vessel,50000,2025-09-30,2025-09-25,2025-10-05,Port A,Supplier Inc,Country A'
-      ].join('\n');
 
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=vessel_template.csv');
-      res.status(200).send(templateContent);
-    } catch (error) {
-      console.error('Template Download Error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to generate template'
-      });
-    }
-  }
 
   async getVesselsByPort(req, res) {
     try {
@@ -238,14 +223,25 @@ class VesselController {
    */
   async downloadTemplate(req, res) {
     try {
-      const template = csvUploadService.generateTemplate();
+      // Get the path to sail_data_new.csv - works for both development and production
+      const csvFilePath = path.resolve(__dirname, '../../sail_data_new.csv');
+      
+      // Check if file exists
+      if (!fs.existsSync(csvFilePath)) {
+        throw new Error('Template file not found');
+      }
+
+      // Read the CSV file
+      const csvContent = fs.readFileSync(csvFilePath, 'utf8');
+
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=vessel_template.csv');
-      res.send(template);
+      res.setHeader('Content-Disposition', 'attachment; filename=sail_data_template.csv');
+      res.status(200).send(csvContent);
     } catch (error) {
+      console.error('Template Download Error:', error);
       res.status(500).json({
         success: false,
-        error: error.message
+        error: 'Failed to download template: ' + error.message
       });
     }
   }

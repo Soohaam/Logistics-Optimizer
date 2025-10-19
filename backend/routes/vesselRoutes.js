@@ -29,6 +29,12 @@ router.get('/', vesselController.getAllVessels);
 // Get vessel statistics
 router.get('/stats', vesselController.getVesselStatistics);
 
+// Download CSV template - MUST come before /:id route
+router.get('/download-template', vesselController.downloadTemplate);
+
+// Handle CSV upload
+router.post('/upload-csv', upload.single('file'), vesselController.uploadVesselCSV);
+
 // Get vessels by port
 router.get('/port/:portName', vesselController.getVesselsByPort);
 
@@ -46,11 +52,5 @@ router.put('/:id', vesselController.updateVessel);
 
 // Delete vessel by ID
 router.delete('/:id', vesselController.deleteVessel);
-
-// Handle CSV upload
-router.post('/upload-csv', upload.single('file'), vesselController.uploadVesselCSV);
-
-// Download CSV template
-router.get('/download-template', vesselController.downloadTemplate);
 
 module.exports = router;
