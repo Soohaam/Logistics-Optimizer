@@ -1,7 +1,5 @@
 # 🚢 SAIL Logistics Optimizer
 
-> **Quantum Quorum** - Smart India Hackathon 2025
-
 An AI-powered logistics optimization platform designed to revolutionize supply chain management for the steel industry. This comprehensive solution leverages machine learning, blockchain technology, and real-time analytics to minimize costs, eliminate inefficiencies, and enhance operational reliability.
 
 ---
@@ -359,7 +357,7 @@ We welcome contributions to the SAIL Logistics Optimizer project! Please follow 
 
 ## 📄 License
 
-This project is developed for Smart India Hackathon 2025 by Team **Quantum Quorum**.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
@@ -373,7 +371,7 @@ This project is developed for Smart India Hackathon 2025 by Team **Quantum Quoru
 
 ## 👥 Team
 
-**Quantum Quorum** - Smart India Hackathon 2025
+Developed by a dedicated team of engineers and data scientists passionate about transforming logistics through AI and innovation.
 
 ---
 
@@ -385,7 +383,7 @@ For questions, suggestions, or collaboration opportunities, please reach out to 
 
 <div align="center">
 
-**Made with ❤️ for Smart India Hackathon 2025**
+**Made with ❤️ by the SAIL Logistics Team**
 
 *Transforming Logistics Through AI & Innovation*
 
