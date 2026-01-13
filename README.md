@@ -6,31 +6,14 @@ An AI-powered logistics optimization platform designed to revolutionize supply c
 
 ---
 
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Technology Stack](#technology-stack)
-- [System Architecture](#system-architecture)
-- [Core Modules](#core-modules)
-- [Impact & Benefits](#impact--benefits)
-- [Feasibility & Viability](#feasibility--viability)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
 ## 🎯 Overview
 
-SAIL Logistics is an intelligent logistics cost savings engine that addresses critical challenges in supply chain management for the steel sector. By integrating AI-driven optimization, blockchain transparency, and predictive analytics, the platform delivers:
+SAIL Logistics is an intelligent logistics optimization engine that addresses critical challenges in supply chain management for the steel sector. By integrating AI-driven optimization, blockchain transparency, and predictive analytics, the platform delivers:
 
-- **₹350-500 Crore** potential annual savings
-- **₹18-35 Crore** annual demurrage cost prevention
 - **4,000+ hours** saved annually through automation
 - **50-70% faster** decision-making compared to manual processes
+- Real-time supply chain visibility and control
+- Enhanced operational efficiency and reliability
 
 ---
 
@@ -41,10 +24,10 @@ SAIL Logistics is an intelligent logistics cost savings engine that addresses cr
 - **Sequential Discharge**: Removes bottlenecks across ports/plants through smart sequencing
 - **Real-time Coordination**: Synchronizes vessel arrivals with plant capacity and material flow
 
-### 💰 Cost Optimization & ROI Dashboard
-- **Live Tracking**: Real-time display of cost savings and efficiency gains
-- **Comprehensive Analytics**: Minimizes freight, port, rail, demurrage, and storage costs
-- **Predictive Insights**: Forecasts plant demand and syncs material flow to reduce holding costs
+### � Analytics & Optimization Dashboard
+- **Live Tracking**: Real-time display of efficiency gains and performance metrics
+- **Comprehensive Analytics**: Optimizes freight, port, rail, and storage operations
+- **Predictive Insights**: Forecasts plant demand and syncs material flow to reduce holding time
 
 ### 🔗 Blockchain Transparency & Compliance
 - **Tamper-proof Records**: Immutable shipment, discharge, and rail records
@@ -180,32 +163,19 @@ graph TB
 
 ## 📊 Impact & Benefits
 
-### Financial Impact (5-Year Projection)
-
-| Year | Current Losses (₹ Crore) | Savings with Solution (₹ Crore) | Net Cost Avoidance (₹ Crore) | Time Saved (Hours/Month) |
-|------|--------------------------|----------------------------------|-------------------------------|--------------------------|
-| Year 1 | 3,400 | 420 | 370 | 300-400 |
-| Year 2 | 3,570 | 441 | 431 | 330-430 |
-| Year 3 | 3,749 | 463 | 453 | 363-484 |
-| Year 4 | 3,936 | 486 | 476 | 399-532 |
-| Year 5 | 4,133 | 510 | 500 | 438-585 |
-
-*Reference: SAIL's FY 2023-24 Report*
-
-### Key Metrics
+### Key Performance Improvements
 
 | Metric | Value |
 |--------|-------|
-| **Annual Logistics Cost (SAIL)** | ₹5,000-6,000 Crore |
-| **Potential Annual Savings** | ₹350-500 Crore |
-| **Demurrage Cost Prevention** | ₹18-35 Crore annually |
 | **Time Efficiency Gains** | 4,000+ hours annually |
 | **Decision Speed Improvement** | 50-70% faster than manual processes |
+| **Carbon Emission Reduction** | 2.5 lakh tonnes yearly |
+| **Automation Level** | Thousands of staff hours saved |
 
 ### Transformational Benefits
 
 1. **💡 Eliminate Inefficiency**
-   - Unlock ₹400-800 Cr initially, scaling to ₹1,200-2,000 Cr company-wide with phased AI optimization
+   - Unlock significant operational improvements through phased AI optimization
 
 2. **⚡ Instant AI-Driven Adjustments**
    - Go from planning delays to instant, AI-driven supply chain adjustments for faster shipments and fewer bottlenecks
@@ -223,7 +193,7 @@ graph TB
    - Predict and overcome disruptions like strikes, weather, and volatility with smart scenario planning and fallback strategies
 
 7. **📋 Procurement Efficiency**
-   - Enhance procurement efficiency by optimizing material pricing and contract timing with AI analytics
+   - Enhance procurement efficiency by optimizing material selection and contract timing with AI analytics
 
 ---
 
