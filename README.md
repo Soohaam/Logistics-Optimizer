@@ -6,6 +6,8 @@ An AI-powered logistics optimization platform designed to revolutionize supply c
 
 ## 🎯 Overview
 
+![SAIL Logistics Landing Page](frontend/public/landing.png)
+
 SAIL Logistics is an intelligent logistics optimization engine that addresses critical challenges in supply chain management for the steel sector. By integrating AI-driven optimization, blockchain transparency, and predictive analytics, the platform delivers:
 
 - **4,000+ hours** saved annually through automation
