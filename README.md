@@ -363,28 +363,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🔗 Links
 
-- **Website**: [SAIL Logistics](https://sail-logistics.example.com)
-- **Video Presentation**: [Watch Demo](https://video-presentation-link.example.com)
-- **Prototype**: [Try Live Demo](https://prototype-link.example.com)
+- **Website**: [SAIL Logistics](https://logistics-optimizer-five.vercel.app/)
+- **Video Presentation**: [Watch Demo](https://www.youtube.com/watch?v=LvP56W8VHq0&feature=youtu.be)
+- **Prototype**: [Try Live Demo](https://logistics-optimizer-five.vercel.app/)
 
 ---
-
-## 👥 Team
-
-Developed by a dedicated team of engineers and data scientists passionate about transforming logistics through AI and innovation.
-
----
-
-## 📞 Contact
-
-For questions, suggestions, or collaboration opportunities, please reach out to the development team.
-
----
-
-<div align="center">
-
-**Made with ❤️ by the SAIL Logistics Team**
-
-*Transforming Logistics Through AI & Innovation*
-
-</div>
