@@ -135,9 +135,13 @@ graph TB
 ## 🔧 Core Modules
 
 ### 1. Vessel Creation & Data Management
-- Manual input forms for vessel, parcel, port, and rail data
-- Automated SAP/Excel data import and conversion
-- Centralized database for all logistics information
+
+![Dashboard Interface](frontend/public/dashboard.png)
+
+The dashboard provides a seamless interface for managing logistics data:
+- **Flexible Data Entry**: Easily create vessels manually or import bulk data via Excel/SAP integration
+- **Dual Mode Input**: Toggle between manual entry for specific adjustments and automated import for large datasets
+- **Centralized Database**: Unified management of all logistics information including vessel, parcel, port, and rail data
 
 ### 2. AI-Powered Prediction Engine
 - **Berthing Delay Prediction**: Forecasts port delays
