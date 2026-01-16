@@ -6,8 +6,6 @@ An AI-powered logistics optimization platform designed to revolutionize supply c
 
 ## 🎯 Overview
 
-![SAIL Logistics Landing Page](frontend/public/landing.png)
-
 SAIL Logistics is an intelligent logistics optimization engine that addresses critical challenges in supply chain management for the steel sector. By integrating AI-driven optimization, blockchain transparency, and predictive analytics, the platform delivers:
 
 - **4,000+ hours** saved annually through automation
@@ -136,8 +134,6 @@ graph TB
 
 ### 1. Vessel Creation & Data Management
 
-![Dashboard Interface](frontend/public/dashboard.png)
-
 The dashboard provides a seamless interface for managing logistics data:
 - **Flexible Data Entry**: Easily create vessels manually or import bulk data via Excel/SAP integration
 - **Dual Mode Input**: Toggle between manual entry for specific adjustments and automated import for large datasets
@@ -161,7 +157,43 @@ The dashboard provides a seamless interface for managing logistics data:
 - Environmental impact analysis
 - Port optimization metrics (single & sequential)
 - Logistical cost analysis
+- Logistical cost analysis
 - Interactive satellite map simulation
+
+---
+
+## 📸 Application Walkthrough
+
+### 1. User Interface Overview
+
+**Landing Page**
+![Landing Page](frontend/public/landing.png)
+
+**Main Dashboard**
+![Dashboard](frontend/public/dashboard.png)
+*Centralized hub for managing vessels, tracking ROI, and accessing predictive insights.*
+
+### 2. Manual Vessel Creation Workflow
+The platform offers a detailed step-by-step wizard for manual vessel configuration:
+
+#### Part 1: General & Supplier Information
+![General Info 1](frontend/public/add%20vessel%201.1.png)
+![General Info 2](frontend/public/add%20vessel%201.2.png)
+*Captures comprehensive vessel details and supplier prerequisites.*
+
+#### Part 2: Parcel & Port Preferences
+![Parcel Info 1](frontend/public/add%20vessel%202.1.png)
+![Parcel Info 2](frontend/public/add%20vessel%202.2.png)
+![Parcel Info 3](frontend/public/add%20vessel%202.3.png)
+*Manages detailed parcel specifications and port discharge preferences.*
+
+#### Part 3: Cost Parameters
+![Cost Info](frontend/public/add%20vessel%203.png)
+*Defines financial parameters for accurate cost optimization.*
+
+#### Part 4: Rail Data Integration
+![Rail Info](frontend/public/add%20vessel%204.png)
+*Integrates last-mile rail connectivity data.*
 
 ---
 
